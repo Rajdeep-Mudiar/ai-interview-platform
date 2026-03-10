@@ -1,17 +1,15 @@
-function Navbar() {
+import { Link } from "react-router-dom";
+
+export default function Navbar() {
   return (
-    <div className="flex justify-between p-6 bg-gray-800 text-white">
-      <h2 className="font-bold">AI Hire</h2>
-
-      <div className="space-x-6">
-        <a href="/">Home</a>
-
-        <a href="/voice-interview">Interview</a>
-
-        <a href="/dashboard">Dashboard</a>
+    <nav className="bg-black text-white p-4 flex justify-between">
+      <h2 className="font-bold">AI Hiring</h2>
+      <div className="flex gap-6">
+        <Link to="/">Home</Link>
+        <Link to="/resume">Resume Analyzer</Link>
+        <Link to="/interview">AI Interview</Link>
+        <Link to="/dashboard">Dashboard</Link>
       </div>
-    </div>
+    </nav>
   );
 }
-
-export default Navbar;

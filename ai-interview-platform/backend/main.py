@@ -13,7 +13,22 @@ from analytics.resume_advisor import resume_suggestions
 from ai_interviewer.ollama_questions import generate_ai_questions
 from analytics.emotion import analyze_emotions
 
+from routes.ranking import router as ranking_router
+from routes.resume_analysis import router as resume_router
+
+from routes.interview_questions import router as question_router
+
+from routes.evaluate_answer import router as eval_router
+from routes.report import router as report_router
+from routes.hiring_decision import router as decision_router
+
 app = FastAPI()
+app.include_router(ranking_router)
+app.include_router(resume_router)
+app.include_router(question_router)
+app.include_router(eval_router)
+app.include_router(report_router)
+app.include_router(decision_router)
 
 app.add_middleware(
 CORSMiddleware,
