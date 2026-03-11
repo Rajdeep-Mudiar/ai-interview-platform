@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import jsPDF from "jspdf";
 import Button from "../components/ui/Button";
 import { Card, CardBody, CardHeader } from "../components/ui/Card";
 import { getUserSession } from "../utils/auth";
@@ -8,12 +7,6 @@ import Leaderboard from "../components/Leaderboard";
 
 function Dashboard() {
   const [candidates, setCandidates] = useState([]);
-
-  useEffect(() => {
-    axios.get("http://localhost:8000/leaderboard").then((res) => {
-      setCandidates(res.data);
-    });
-  }, []);
   const [result, setResult] = useState(null);
   const [explanation, setExplanation] = useState([]);
   const [busy, setBusy] = useState(false);
@@ -23,12 +16,20 @@ function Dashboard() {
     timeTaken: "—",
     lastScore: 0
   });
+  
   const session = getUserSession();
   const displayName = session?.name || "Candidate";
+  const API_BASE = "http://127.0.0.1:8000";
+
+  useEffect(() => {
+    axios.get(`${API_BASE}/leaderboard`).then((res) => {
+      setCandidates(res.data);
+    });
+  }, []);
 
   useEffect(() => {
     if (session?.id) {
-      axios.get(`http://localhost:8000/stats/candidate/${session.id}`).then((res) => {
+      axios.get(`${API_BASE}/stats/candidate/${session.id}`).then((res) => {
         setUserStats(res.data);
       });
     }
@@ -41,16 +42,20 @@ function Dashboard() {
     }
     setBusy(true);
     try {
-      const res = await axios.post("http://localhost:8000/generate-report", {
+      const res = await axios.post(`${API_BASE}/generate-report`, {
         name: displayName,
         resume_score: userStats.lastScore,
-        interview_score: userStats.lastScore, // Using lastScore for both for now
+        interview_score: userStats.lastScore,
         integrity_score: 100,
         skills: [],
         missing_skills: [],
         recommendation: "Evaluation Pending",
       });
       alert(`Report generated: ${res.data.file}`);
+      setResult({
+        final_score: userStats.lastScore,
+        recommendation: userStats.lastScore > 70 ? "Strong Fit" : "Needs Review"
+      });
     } catch (err) {
       console.error("Report generation failed:", err);
       alert("Failed to generate report.");
@@ -70,7 +75,7 @@ function Dashboard() {
     }
     setBusy(true);
     try {
-      const res = await axios.post("http://localhost:8000/hiring-decision", {
+      const res = await axios.post(`${API_BASE}/hiring-decision`, {
         resume_score: userStats.lastScore,
         interview_score: userStats.lastScore,
         integrity_score: 100,
@@ -78,6 +83,7 @@ function Dashboard() {
       setExplanation([res.data.explanation]);
     } catch (err) {
       console.error("Explanation failed:", err);
+      alert("Failed to get AI explanation.");
     } finally {
       setBusy(false);
     }

@@ -1,7 +1,10 @@
 from fastapi import APIRouter
-from database.mongo import jobs_col, results_col, users_col
+from database.mongo import get_jobs_col, get_results_col, get_users_col
 
 router = APIRouter(prefix="/stats", tags=["stats"])
+jobs_col = get_jobs_col()
+results_col = get_results_col()
+users_col = get_users_col()
 
 @router.get("/recruiter")
 async def get_recruiter_stats():

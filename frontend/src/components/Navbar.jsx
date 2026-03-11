@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, NavLink } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import Button from "./ui/Button";
 import { cn } from "./ui/cn";
 import { getUserSession, clearUserSession } from "../utils/auth";
@@ -31,18 +31,25 @@ function NavItem({ to, children, onClick }) {
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
-  const session = getUserSession();
+  const location = useLocation();
+  const [session, setSession] = useState(getUserSession());
+  
+  // Update session state when location changes (e.g., after login/logout)
+  useEffect(() => {
+    setSession(getUserSession());
+  }, [location]);
+
   const isRecruiter = session?.role === "recruiter";
 
   const handleLogout = () => {
     clearUserSession();
+    setSession(null);
     window.location.href = "/login";
   };
 
   const navItems = isRecruiter
     ? [
-        ...baseNavItems,
-        { to: "/my-jobs", label: "My Jobs" },
+        { to: "/", label: "Home" },
         { to: "/recruiter-dashboard", label: "Recruiter Dashboard" },
       ]
     : baseNavItems;

@@ -4,9 +4,10 @@ from bson import ObjectId
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from database.mongo import jobs_col
+from database.mongo import get_jobs_col
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
+jobs_col = get_jobs_col()
 
 
 class JobCreate(BaseModel):

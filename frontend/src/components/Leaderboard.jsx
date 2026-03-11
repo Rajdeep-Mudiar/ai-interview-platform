@@ -1,98 +1,81 @@
+import React from "react";
+import { Card, CardBody, CardHeader } from "./ui/Card";
 
-import React from 'react';
-
-const Leaderboard = ({ candidates }) => {
-  // Sort candidates by overall score descending
-  const sortedCandidates = [...candidates].sort((a, b) => b.overallScore - a.overallScore);
-
+export default function Leaderboard({ candidates = [] }) {
   return (
-    <div className="lg:col-span-12">
-      <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-        <div className="flex items-center justify-between mb-6">
+    <Card>
+      <CardHeader className="pb-4">
+        <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-slate-900">Top Candidates</h2>
-            <p className="text-sm text-slate-500 mt-1">Real-time performance ranking based on AI evaluation.</p>
+            <div className="text-sm font-semibold text-slate-900">
+              Top Performers
+            </div>
+            <div className="text-sm text-slate-600">
+              Highest scoring candidates in the platform.
+            </div>
           </div>
-          <div className="flex gap-2">
-             <div className="px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded-full ring-1 ring-emerald-200">
-               {candidates.length} Total
-             </div>
+          <div className="rounded-full bg-blue-50 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-blue-700 ring-1 ring-blue-200">
+            Global Rankings
           </div>
         </div>
-
+      </CardHeader>
+      <CardBody className="p-0">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-100">
-            <thead>
-              <tr className="text-left text-xs font-semibold uppercase tracking-wider text-slate-400">
-                <th className="pb-4 pt-0 px-4">Rank</th>
-                <th className="pb-4 pt-0 px-4">Candidate</th>
-                <th className="pb-4 pt-0 px-4 text-center">Score</th>
-                <th className="pb-4 pt-0 px-4 text-center">Time</th>
-                <th className="pb-4 pt-0 px-4 text-center">Integrity</th>
-                <th className="pb-4 pt-0 px-4">Status</th>
+          <table className="w-full border-collapse text-left text-sm">
+            <thead className="bg-slate-50/50">
+              <tr>
+                <th className="px-6 py-3 font-semibold text-slate-900 border-b border-slate-200">Rank</th>
+                <th className="px-6 py-3 font-semibold text-slate-900 border-b border-slate-200">Candidate</th>
+                <th className="px-6 py-3 font-semibold text-slate-900 border-b border-slate-200 text-center">Score</th>
+                <th className="px-6 py-3 font-semibold text-slate-900 border-b border-slate-200 text-center">Time</th>
+                <th className="px-6 py-3 font-semibold text-slate-900 border-b border-slate-200 text-right">Integrity</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
-              {sortedCandidates.map((candidate, index) => (
-                <tr key={candidate.id} className="group hover:bg-slate-50/50 transition-colors">
-                  <td className="py-4 px-4">
-                    <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${
-                      index === 0 ? 'bg-amber-100 text-amber-700 ring-1 ring-amber-200' :
-                      index === 1 ? 'bg-slate-100 text-slate-600 ring-1 ring-slate-200' :
-                      index === 2 ? 'bg-orange-50 text-orange-700 ring-1 ring-orange-100' :
-                      'text-slate-400'
-                    }`}>
-                      {index + 1}
-                    </div>
-                  </td>
-                  <td className="py-4 px-4">
-                    <div className="flex items-center gap-3">
-                      <div className="h-9 w-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-semibold text-xs ring-1 ring-slate-200">
-                        {candidate.name.split(' ').map(n => n[0]).join('')}
-                      </div>
-                      <div className="font-semibold text-slate-900">{candidate.name}</div>
-                    </div>
-                  </td>
-                  <td className="py-4 px-4 text-center">
-                    <div className="inline-flex items-center justify-center px-2.5 py-1 rounded-lg bg-slate-900 text-white font-bold text-sm">
-                      {candidate.overallScore}%
-                    </div>
-                  </td>
-                  <td className="py-4 px-4 text-center">
-                    <span className="text-sm text-slate-600 font-medium">{candidate.timeTaken}m</span>
-                  </td>
-                  <td className="py-4 px-4 text-center">
-                    <div className="flex items-center justify-center gap-2">
-                      <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                        <div 
-                          className={`h-full rounded-full ${candidate.integrity > 90 ? 'bg-emerald-500' : 'bg-amber-500'}`}
-                          style={{ width: `${candidate.integrity}%` }}
-                        />
-                      </div>
-                      <span className="text-xs font-bold text-slate-700">{candidate.integrity}%</span>
-                    </div>
-                  </td>
-                  <td className="py-4 px-4">
-                    <span className="inline-flex items-center rounded-md bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
-                      Completed
-                    </span>
-                  </td>
-                </tr>
-              ))}
-              {sortedCandidates.length === 0 && (
+            <tbody className="divide-y divide-slate-100">
+              {candidates.length > 0 ? (
+                candidates.map((candidate, index) => (
+                  <tr key={candidate.id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-6 py-4 border-b border-slate-100">
+                      <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold ${
+                        index === 0 ? "bg-amber-100 text-amber-700 ring-1 ring-amber-200" :
+                        index === 1 ? "bg-slate-200 text-slate-700 ring-1 ring-slate-300" :
+                        index === 2 ? "bg-orange-100 text-orange-700 ring-1 ring-orange-200" :
+                        "bg-white text-slate-500 ring-1 ring-slate-200"
+                      }`}>
+                        {index + 1}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 border-b border-slate-100 font-medium text-slate-900">
+                      {candidate.name}
+                    </td>
+                    <td className="px-6 py-4 border-b border-slate-100 text-center">
+                      <span className="font-bold text-slate-900">{candidate.overallScore}%</span>
+                    </td>
+                    <td className="px-6 py-4 border-b border-slate-100 text-center text-slate-600">
+                      {candidate.timeTaken}m
+                    </td>
+                    <td className="px-6 py-4 border-b border-slate-100 text-right">
+                      <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-medium ${
+                        candidate.integrity >= 90 ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200" :
+                        candidate.integrity >= 75 ? "bg-amber-50 text-amber-700 ring-1 ring-amber-200" :
+                        "bg-rose-50 text-rose-700 ring-1 ring-rose-200"
+                      }`}>
+                        {candidate.integrity}%
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              ) : (
                 <tr>
-                  <td colSpan="6" className="py-12 text-center text-sm text-slate-500 italic">
-                    No evaluation data available yet.
+                  <td colSpan="5" className="px-6 py-10 text-center text-slate-500">
+                    No candidates found in the leaderboard.
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
-      </div>
-    </div>
+      </CardBody>
+    </Card>
   );
-};
-
-export default Leaderboard;
-
+}

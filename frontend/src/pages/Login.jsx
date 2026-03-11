@@ -1,57 +1,68 @@
 import axios from "axios";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import Button from "../components/ui/Button";
 import { Card, CardBody, CardHeader } from "../components/ui/Card";
-import { HelperText, Input, Label } from "../components/ui/Form";
-import { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { saveUserSession } from "../utils/auth";
+import { Input, Label } from "../components/ui/Form";
+import { saveUserSession, getUserSession } from "../utils/auth";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = "http://127.0.0.1:8000";
 
-function Login() {
+export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from?.pathname || "/";
 
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
+  const [company, setCompany] = useState("");
   const [role, setRole] = useState("candidate");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [mode, setMode] = useState("signin"); // "signin" | "signup"
+
+  // If already logged in, redirect away from login page
+  useEffect(() => {
+    const session = getUserSession();
+    if (session) {
+      if (session.role === "recruiter") {
+        navigate("/recruiter-dashboard", { replace: true });
+      } else {
+        navigate("/dashboard", { replace: true });
+      }
+    }
+  }, [navigate]);
 
   async function onSubmit(e) {
     e.preventDefault();
-    if (!name || !password) {
-      setError("Please enter a name and password.");
+    
+    if (!email || !password || (isSignUp && !name)) {
+      setError("Please fill in all required fields.");
       return;
     }
+    
     setError("");
     setBusy(true);
+    
+    const endpoint = isSignUp ? "/auth/signup" : "/auth/signin";
+    const payload = isSignUp 
+      ? { email, name, password, role, company: role === "recruiter" ? company : "" }
+      : { email, password, role };
+
     try {
-      let res;
-      if (mode === "signin") {
-        res = await axios.post(`${API_BASE}/auth/signin`, {
-          name,
-          password,
-          role,
-        });
-      } else {
-        const signupPath =
-          role === "recruiter"
-            ? `${API_BASE}/auth/signup/recruiter`
-            : `${API_BASE}/auth/signup/candidate`;
-        res = await axios.post(signupPath, {
-          name,
-          password,
-        });
-      }
-
-      const user = res.data; // { id, name, role }
+      console.log(`Attempting ${isSignUp ? 'signup' : 'signin'} at ${API_BASE}${endpoint}`);
+      console.log("Payload stringified:", JSON.stringify(payload));
+      
+      const res = await axios.post(`${API_BASE}${endpoint}`, payload);
+      const user = res.data; 
+      
       saveUserSession(user);
+      console.log("Session saved successfully:", user);
+      
+      // Trigger a storage event for Navbar to update if needed
+      window.dispatchEvent(new Event("storage"));
 
-      // If there was a redirect source, go there.
-      // Otherwise, go to default dashboard based on role.
       if (location.state?.from) {
         navigate(from, { replace: true });
       } else if (user.role === "recruiter") {
@@ -60,141 +71,169 @@ function Login() {
         navigate("/dashboard", { replace: true });
       }
     } catch (err) {
-      // Try to surface the most useful error message possible
-      // 1) Backend-provided detail
-      const backendDetail =
-        err.response?.data?.detail ??
-        (typeof err.response?.data === "string"
-          ? err.response.data
-          : null);
-
-      // 2) Network/connectivity issue
-      if (!err.response) {
-        setError(
-          "Cannot reach the server. Please make sure the backend is running at " +
-            API_BASE +
-            ".",
-        );
-      } else if (backendDetail) {
-        setError(backendDetail);
-      } else if (mode === "signin") {
-        setError("An error occurred during sign in.");
-      } else {
-        setError("An error occurred during sign up.");
+      console.error("Authentication error detailed:", err);
+      
+      let errorMsg = "An error occurred. Please check your credentials.";
+      
+      if (err.response?.data?.detail) {
+        const detail = err.response.data.detail;
+        if (typeof detail === "string") {
+          errorMsg = detail;
+        } else if (Array.isArray(detail)) {
+          // FastAPI validation error list
+          errorMsg = detail.map(d => `${d.loc.join('.')}: ${d.msg}`).join(", ");
+        } else if (typeof detail === "object") {
+          errorMsg = JSON.stringify(detail);
+        }
       }
-      // Helpful for debugging in the browser
-      // eslint-disable-next-line no-console
-      console.error("Auth error:", err);
+      
+      setError(errorMsg);
     } finally {
       setBusy(false);
     }
   }
 
-  const title = mode === "signin" ? "Sign in" : "Sign up";
-  const description =
-    mode === "signin"
-      ? "Enter your name and password, then choose whether you are a candidate or a recruiter."
-      : "Create a new account as a candidate or recruiter. You can use this account to sign in later.";
-
   return (
-    <div className="cb-container py-10 sm:py-14">
-      <div className="mx-auto grid max-w-xl gap-6">
-        <div className="space-y-2 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
-            {title}
-          </h1>
-          <p className="text-sm text-slate-600">{description}</p>
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        <div className="text-center">
+          <div className="mx-auto h-12 w-12 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-blue-200">
+            CB
+          </div>
+          <h2 className="mt-6 text-3xl font-extrabold text-slate-900">
+            {isSignUp ? "Create your account" : "Sign in to CareBridge"}
+          </h2>
+          <p className="mt-2 text-sm text-slate-600">
+            {isSignUp 
+              ? "Join the next generation of AI-powered hiring." 
+              : "Welcome back! Please enter your details."}
+          </p>
         </div>
 
-        <Card>
-          <CardHeader className="pb-4">
-            <div className="flex items-center justify-between">
-              <div className="text-sm font-semibold text-slate-900">
-                Account details
-              </div>
-              <div className="flex items-center gap-2 text-xs">
-                <span className="text-slate-500">
-                  {mode === "signin"
-                    ? "New here?"
-                    : "Already have an account?"}
-                </span>
-                <button
-                  type="button"
-                  className="font-medium text-indigo-600 hover:text-indigo-500"
-                  onClick={() => {
-                    setMode((m) => (m === "signin" ? "signup" : "signin"));
-                    setError("");
-                  }}
-                >
-                  {mode === "signin" ? "Sign up" : "Sign in"}
-                </button>
-              </div>
+        <Card className="border-none shadow-xl ring-1 ring-slate-200">
+          <CardHeader className="border-b border-slate-100 pb-4">
+            <div className="flex bg-slate-100 p-1 rounded-lg">
+              <button
+                onClick={() => { setIsSignUp(false); setError(""); }}
+                className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${!isSignUp ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+              >
+                Sign In
+              </button>
+              <button
+                onClick={() => { setIsSignUp(true); setError(""); }}
+                className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${isSignUp ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+              >
+                Sign Up
+              </button>
             </div>
           </CardHeader>
-          <CardBody>
-            <form className="space-y-4" onSubmit={onSubmit}>
-              <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
+          <CardBody className="pt-6">
+            <form className="space-y-5" onSubmit={onSubmit}>
+              {isSignUp && (
+                <div className="space-y-1">
+                  <Label htmlFor="name">Full Name</Label>
+                  <Input
+                    id="name"
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Enter your full name"
+                    className="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    required
+                  />
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <Label htmlFor="email">Email address</Label>
                 <Input
-                  id="name"
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Enter your name"
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="name@example.com"
+                  className="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  required
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Label htmlFor="password">Password</Label>
                 <Input
                   id="password"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
+                  placeholder="••••••••"
+                  className="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  required
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Label htmlFor="role">Role</Label>
                 <select
                   id="role"
-                  className="cb-input"
+                  className="block w-full pl-3 pr-10 py-2 text-base border border-slate-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
                 >
-                  <option value="candidate">Candidate</option>
-                  <option value="recruiter">Recruiter</option>
+                  <option value="candidate">I am a Candidate</option>
+                  <option value="recruiter">I am a Recruiter</option>
                 </select>
               </div>
 
-              {error && (
-                <p className="text-sm text-rose-600">
-                  {error}
-                </p>
+              {isSignUp && role === "recruiter" && (
+                <div className="space-y-1">
+                  <Label htmlFor="company">Company Name</Label>
+                  <Input
+                    id="company"
+                    type="text"
+                    value={company}
+                    onChange={(e) => setCompany(e.target.value)}
+                    placeholder="Acme Inc."
+                    className="block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  />
+                </div>
               )}
 
-              <Button type="submit" disabled={busy}>
-                {busy
-                  ? mode === "signin"
-                    ? "Signing in..."
-                    : "Signing up..."
-                  : mode === "signin"
-                    ? "Continue"
-                    : "Create account"}
-              </Button>
+              {error && (
+                <div className="rounded-md bg-red-50 p-3">
+                  <div className="flex">
+                    <div className="ml-3">
+                      <p className="text-sm font-medium text-red-800">{error}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
-              <HelperText>
-                You can use the same account to sign in again later. Choose
-                whether you are a candidate or recruiter so we can show the
-                right dashboard.
-              </HelperText>
+              <div>
+                <Button
+                  type="submit"
+                  disabled={busy}
+                  className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                >
+                  {busy ? (
+                    <span className="flex items-center gap-2">
+                      <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Processing...
+                    </span>
+                  ) : (
+                    isSignUp ? "Create Account" : "Sign In"
+                  )}
+                </Button>
+              </div>
             </form>
           </CardBody>
         </Card>
+        
+        <p className="text-center text-xs text-slate-500">
+          By continuing, you agree to CareBridge's <span className="underline cursor-pointer">Terms of Service</span> and <span className="underline cursor-pointer">Privacy Policy</span>.
+        </p>
       </div>
     </div>
   );
 }
-
-export default Login;

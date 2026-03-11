@@ -5,7 +5,8 @@ spacy
 pdfplumber
 sentence-transformers
 reportlab
-pydantic
+pydantic[email]
+email-validator
 pymongo
 python-dotenv
 bcrypt

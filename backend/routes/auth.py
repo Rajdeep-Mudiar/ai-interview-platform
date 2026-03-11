@@ -1,93 +1,98 @@
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from fastapi import APIRouter, HTTPException, Body
+from pydantic import BaseModel, EmailStr
 from datetime import datetime
+from typing import Optional
 import bcrypt
+import logging
 
-from database.mongo import users_col
+from database.mongo import get_users_col
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["auth"])
+users_col = get_users_col()
 
-
-class SignInBody(BaseModel):
-    name: str
-    password: str
+class UserBase(BaseModel):
+    email: EmailStr
     role: str  # "candidate" or "recruiter"
 
-
-class CandidateSignUpBody(BaseModel):
+class SignUpBody(UserBase):
     name: str
     password: str
+    company: Optional[str] = None  # Optional field, primarily for recruiters
 
-
-class RecruiterSignUpBody(BaseModel):
-    name: str
+class SignInBody(UserBase):
     password: str
-
 
 def _user_to_public(doc):
     return {
         "id": str(doc["_id"]),
-        "name": doc["name"],
-        "role": doc["role"],
+        "name": doc.get("name"),
+        "email": doc.get("email"),
+        "role": doc.get("role"),
+        "company": doc.get("company"),
+        "created_at": doc.get("created_at")
     }
 
+@router.post("/signup")
+def signup(body: SignUpBody):
+    """
+    Explicit sign-up endpoint. 
+    Checks if a user with the given email and role already exists.
+    """
+    logger.info(f"Signup request received: {body.email} as {body.role}")
+    if body.role not in {"candidate", "recruiter"}:
+        raise HTTPException(status_code=400, detail="Invalid role. Must be 'candidate' or 'recruiter'.")
 
-def _create_user(name: str, password: str, role: str):
-    if role not in {"candidate", "recruiter"}:
-        raise HTTPException(status_code=400, detail="Invalid role")
-
-    existing = users_col.find_one({"name": name, "role": role})
+    # Check if user already exists with this email AND role
+    existing = users_col.find_one({"email": body.email, "role": body.role})
     if existing:
-        raise HTTPException(status_code=400, detail="User already exists")
+        raise HTTPException(status_code=409, detail=f"User with this email already exists as a {body.role}.")
 
-    password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
-    doc = {
-        "name": name,
-        "role": role,
+    # Hash the password
+    password_hash = bcrypt.hashpw(
+        body.password.encode("utf-8"), bcrypt.gensalt()
+    )
+
+    # Prepare document
+    user_doc = {
+        "name": body.name,
+        "email": body.email,
+        "role": body.role,
         "password_hash": password_hash,
+        "company": body.company if body.role == "recruiter" else None,
         "created_at": datetime.utcnow(),
     }
-    result = users_col.insert_one(doc)
-    doc["_id"] = result.inserted_id
-    return _user_to_public(doc)
 
-
-@router.post("/signup/candidate")
-def signup_candidate(body: CandidateSignUpBody):
-    """
-    Sign up a new candidate user.
-    """
-    return _create_user(name=body.name, password=body.password, role="candidate")
-
-
-@router.post("/signup/recruiter")
-def signup_recruiter(body: RecruiterSignUpBody):
-    """
-    Sign up a new recruiter user.
-    """
-    return _create_user(name=body.name, password=body.password, role="recruiter")
-
+    try:
+        result = users_col.insert_one(user_doc)
+        user_doc["_id"] = result.inserted_id
+        logger.info(f"New {body.role} registered successfully: {body.email}")
+        return _user_to_public(user_doc)
+    except Exception as e:
+        logger.error(f"Error during signup: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error during registration.")
 
 @router.post("/signin")
 def signin(body: SignInBody):
     """
-    Sign in an existing user backed by MongoDB.
-
-    - If user (name + role) does not exist, a 404 error is returned.
-    - If it exists, password is validated.
+    Explicit sign-in endpoint.
+    Validates credentials against email and role.
     """
+    logger.info(f"Signin request received: {body.email} as {body.role}")
     if body.role not in {"candidate", "recruiter"}:
-        raise HTTPException(status_code=400, detail="Invalid role")
+        raise HTTPException(status_code=400, detail="Invalid role.")
 
-    existing = users_col.find_one({"name": body.name, "role": body.role})
+    # Find the user
+    user = users_col.find_one({"email": body.email, "role": body.role})
+    
+    if not user:
+        logger.warning(f"Signin failed: User not found - {body.email} as {body.role}")
+        raise HTTPException(status_code=401, detail="Invalid email or password.")
 
-    if not existing:
-        raise HTTPException(status_code=404, detail="User not found. Please sign up first.")
+    # Verify password
+    if not bcrypt.checkpw(body.password.encode("utf-8"), user["password_hash"]):
+        logger.warning(f"Signin failed: Incorrect password for {body.email}")
+        raise HTTPException(status_code=401, detail="Invalid email or password.")
 
-    if not bcrypt.checkpw(
-        body.password.encode("utf-8"), existing["password_hash"]
-    ):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
-
-    return _user_to_public(existing)
-
+    logger.info(f"User signed in successfully: {body.email} as {body.role}")
+    return _user_to_public(user)

@@ -125,38 +125,78 @@ export default function ResumeAnalysis() {
             {result ? (
               <div className="grid gap-4">
                 <div className="rounded-xl bg-slate-50 p-4 ring-1 ring-slate-200">
-                  <div className="text-xs font-medium text-slate-500">
-                    Match score
+                  <div className="flex justify-between items-center">
+                    <div className="text-xs font-medium text-slate-500">Overall Match Score</div>
+                    <div className="text-2xl font-bold text-slate-900">{result.score}%</div>
                   </div>
-                  <div className="mt-1 text-2xl font-semibold text-slate-900">
-                    {result.score}%
+                  <div className="mt-3 space-y-2">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-slate-600">Text Similarity</span>
+                      <span className="font-semibold text-slate-900">{result.metrics?.text_similarity}%</span>
+                    </div>
+                    <div className="w-full bg-slate-200 rounded-full h-1.5">
+                      <div className="bg-blue-600 h-1.5 rounded-full" style={{ width: `${result.metrics?.text_similarity}%` }}></div>
+                    </div>
+                    <div className="flex justify-between text-xs pt-1">
+                      <span className="text-slate-600">Skill Match Rate</span>
+                      <span className="font-semibold text-slate-900">{result.metrics?.skill_match_rate}%</span>
+                    </div>
+                    <div className="w-full bg-slate-200 rounded-full h-1.5">
+                      <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: `${result.metrics?.skill_match_rate}%` }}></div>
+                    </div>
                   </div>
                 </div>
+
                 <div className="rounded-xl bg-white p-4 ring-1 ring-slate-200">
-                  <div className="text-xs font-medium text-slate-500">
-                    Skills found
-                  </div>
-                  <div className="mt-1 text-sm text-slate-700">
-                    {result.resume_skills?.length
-                      ? result.resume_skills.join(", ")
-                      : "None detected."}
-                  </div>
-                </div>
-                <div className="rounded-xl bg-white p-4 ring-1 ring-slate-200">
-                  <div className="text-xs font-medium text-slate-500">
-                    Missing skills
-                  </div>
-                  <div className="mt-1 text-sm text-slate-700">
-                    {result.missing_skills?.length
-                      ? result.missing_skills.join(", ")
-                      : "None detected."}
+                  <div className="text-xs font-medium text-slate-500 mb-2">Skills Analysis</div>
+                  <div className="space-y-3">
+                    {Object.entries(result.resume_skills || {}).map(([category, skills]) => (
+                      <div key={category}>
+                        <div className="text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1">{category}</div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {skills.map(skill => (
+                            <span key={skill} className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded-md text-[11px] font-medium border border-blue-100">
+                              {skill}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                    {!Object.keys(result.resume_skills || {}).length && <div className="text-sm text-slate-500">No categorized skills detected.</div>}
                   </div>
                 </div>
+
+                {result.missing_skills?.length > 0 && (
+                  <div className="rounded-xl bg-amber-50 p-4 ring-1 ring-amber-200">
+                    <div className="text-xs font-medium text-amber-700 mb-2">Missing Critical Skills</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {result.missing_skills.map(skill => (
+                        <span key={skill} className="px-2 py-0.5 bg-white text-amber-700 rounded-md text-[11px] font-medium border border-amber-200">
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {result.suggestions?.length > 0 && (
+                  <div className="rounded-xl bg-white p-4 ring-1 ring-slate-200 border-l-4 border-l-blue-500">
+                    <div className="text-xs font-medium text-slate-500 mb-2">AI Suggestions</div>
+                    <ul className="list-disc list-inside space-y-1.5">
+                      {result.suggestions.map((suggestion, idx) => (
+                        <li key={idx} className="text-xs text-slate-700 leading-relaxed">
+                          {suggestion}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
                 <Button 
                   onClick={() => navigate("/interview-flow", { state: { resume: result.resume_text || file?.name, jd: jd } })}
-                  className="mt-2"
+                  className="mt-2 w-full"
                 >
-                  Go to Interview Pipeline
+                  Proceed to Interview
                 </Button>
               </div>
             ) : (

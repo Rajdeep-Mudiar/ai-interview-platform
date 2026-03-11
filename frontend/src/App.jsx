@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 
 import Home from "./pages/Home";
 import Login from "./pages/Login";
@@ -12,57 +12,70 @@ import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import ProtectedRoute from "./components/ProtectedRoute";
 import InterviewFlow from "./pages/InterviewFlow";
-
 import ResumeAnalysis from "./pages/ResumeAnalysis";
 import VideoLanding from "./pages/VideoLanding";
 import Jobs from "./pages/Jobs";
-import MyJobs from "./pages/MyJobs";
+
+import ErrorBoundary from "./components/ErrorBoundary";
+
+// Layout component to keep things organized
+const MainLayout = () => (
+  <ErrorBoundary>
+    <Navbar />
+    <main className="min-h-[calc(100vh-4rem)] bg-slate-50">
+      <Outlet />
+    </main>
+    <Footer />
+  </ErrorBoundary>
+);
 
 function App() {
   return (
-    <BrowserRouter>
-      <Navbar />
-      <main className="min-h-[calc(100vh-4rem)]">
+    <ErrorBoundary>
+      <BrowserRouter>
         <Routes>
+          {/* Auth Route - No Layout */}
           <Route path="/login" element={<Login />} />
-          <Route
-            path="/*"
-            element={
-              <ProtectedRoute>
-                <Routes>
-                  <Route path="/" element={<VideoLanding />} />
-                  <Route path="/home" element={<Home />} />
-                  <Route path="/interview" element={<Interview />} />
-                  <Route path="/interview-flow" element={<InterviewFlow />} />
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  <Route
-                    path="/recruiter-dashboard"
-                    element={
-                      <ProtectedRoute role="recruiter">
-                        <RecruiterDashboard />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/my-jobs"
-                    element={
-                      <ProtectedRoute role="recruiter">
-                        <MyJobs />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route path="/jobs" element={<Jobs />} />
-                  <Route path="/report" element={<Report />} />
-                  <Route path="/voice-interview" element={<VoiceInterview />} />
-                  <Route path="/resume-analysis" element={<ResumeAnalysis />} />
-                </Routes>
-              </ProtectedRoute>
-            }
-          />
+
+          {/* Protected Routes with Layout */}
+          <Route element={<MainLayout />}>
+            <Route path="/" element={<ProtectedRoute><VideoLanding /></ProtectedRoute>} />
+            <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+            
+            {/* Candidate Pipeline */}
+            <Route path="/resume-analysis" element={<ProtectedRoute><ResumeAnalysis /></ProtectedRoute>} />
+            <Route path="/interview-flow" element={<ProtectedRoute><InterviewFlow /></ProtectedRoute>} />
+            <Route path="/interview" element={<ProtectedRoute><Interview /></ProtectedRoute>} />
+            <Route path="/voice-interview" element={<ProtectedRoute><VoiceInterview /></ProtectedRoute>} />
+            <Route path="/report" element={<ProtectedRoute><Report /></ProtectedRoute>} />
+            
+            {/* Candidate Dashboard */}
+            <Route 
+              path="/dashboard" 
+              element={
+                <ProtectedRoute role="candidate">
+                  <Dashboard />
+                </ProtectedRoute>
+              } 
+            />
+
+            {/* Recruiter Tools */}
+            <Route path="/jobs" element={<ProtectedRoute role="recruiter"><Jobs /></ProtectedRoute>} />
+            <Route
+              path="/recruiter-dashboard"
+              element={
+                <ProtectedRoute role="recruiter">
+                  <RecruiterDashboard />
+                </ProtectedRoute>
+              }
+            />
+          </Route>
+
+          {/* Global Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </main>
-      <Footer />
-    </BrowserRouter>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
 

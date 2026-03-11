@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
 import Button from "../components/ui/Button";
 import { Card, CardBody, CardHeader } from "../components/ui/Card";
@@ -15,14 +15,19 @@ function RecruiterDashboard() {
     integrityRate: "0% passing"
   });
 
+  const session = getUserSession();
+  const recruiterName = session?.name || "Recruiter";
+  const API_BASE = "http://127.0.0.1:8000";
+
   useEffect(() => {
-    axios.get("http://localhost:8000/leaderboard").then((res) => {
+    axios.get(`${API_BASE}/leaderboard`).then((res) => {
       setCandidates(res.data);
     });
-    axios.get("http://localhost:8000/stats/recruiter").then((res) => {
+    axios.get(`${API_BASE}/stats/recruiter`).then((res) => {
       setStats(res.data);
     });
   }, []);
+
   const [alerts, setAlerts] = useState([]);
   const [reportFile, setReportFile] = useState(null);
   const [decision, setDecision] = useState(null);
@@ -31,82 +36,66 @@ function RecruiterDashboard() {
   const [jobTitle, setJobTitle] = useState("");
   const [jobDescription, setJobDescription] = useState("");
   const [jobQuestions, setJobQuestions] = useState("");
-  const session = getUserSession();
-  const recruiterName = session?.name || "Recruiter";
 
   useEffect(() => {
-    axios.get("http://localhost:8000/alerts").then((res) => {
+    axios.get(`${API_BASE}/alerts`).then((res) => {
       setAlerts(res.data);
     });
-    axios
-      .get("http://localhost:8000/jobs", {
-        params: { recruiter_id: session?.id },
-      })
-      .then((res) => setJobs(res.data));
+    if (session?.id) {
+      axios
+        .get(`${API_BASE}/jobs`, {
+          params: { recruiter_id: session?.id },
+        })
+        .then((res) => setJobs(res.data));
+    }
   }, [session]);
 
-  async function generateReport() {
-    setBusy(true);
-    try {
-      const res = await axios.post("http://localhost:8000/generate-report", {
-        name: "Alex Johnson",
-        resume_score: 82,
-        interview_score: 86,
-        integrity_score: 91,
-        skills: ["Python", "React", "SQL"],
-        missing_skills: ["Docker", "AWS"],
-        recommendation: "Strong Hire",
-      });
-      setReportFile(res.data.file);
-    } catch (err) {
-      console.error("Report generation failed:", err);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function getDecision() {
-    setBusy(true);
-    try {
-      const res = await axios.post("http://localhost:8000/hiring-decision", {
-        resume_score: 82,
-        interview_score: 86,
-        integrity_score: 91,
-      });
-      setDecision(res.data);
-    } catch (err) {
-      console.error("Hiring decision failed:", err);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function createJob(e) {
+  const createJob = async (e) => {
     e.preventDefault();
-    if (!session) return;
-    if (!jobTitle.trim() || !jobDescription.trim()) return;
-    const questions = jobQuestions
-      .split("\n")
-      .map((q) => q.trim())
-      .filter(Boolean);
+    if (!jobTitle || !jobDescription) return;
     setBusy(true);
     try {
-      const res = await axios.post("http://localhost:8000/jobs/", {
-        recruiter_id: session.id,
+      // Split questions by newline and filter empty strings
+      const questionsList = jobQuestions
+        ? jobQuestions.split("\n").map(q => q.trim()).filter(q => q)
+        : [];
+
+      await axios.post(`${API_BASE}/jobs/`, {
         title: jobTitle,
         description: jobDescription,
-        questions,
+        recruiter_id: session?.id,
+        questions: questionsList
       });
-      setJobs((prev) => [res.data, ...prev]);
+      alert("Job created successfully!");
       setJobTitle("");
       setJobDescription("");
       setJobQuestions("");
+      // Refresh jobs list
+      const res = await axios.get(`${API_BASE}/jobs/`, {
+        params: { recruiter_id: session?.id },
+      });
+      setJobs(res.data);
     } catch (err) {
-      console.error("Job creation failed:", err);
+      console.error("Failed to create job:", err);
+      alert("Failed to create job. Please try again.");
     } finally {
       setBusy(false);
     }
-  }
+  };
+
+  const generateHiringDecision = async (candidateId) => {
+    setBusy(true);
+    try {
+      const res = await axios.post(`${API_BASE}/hiring-decision`, {
+        candidate_id: candidateId,
+      });
+      setDecision(res.data.decision);
+    } catch (err) {
+      console.error("Decision failed:", err);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <div className="cb-container py-10 sm:py-14">
@@ -153,52 +142,25 @@ function RecruiterDashboard() {
         <Card className="lg:col-span-4">
           <CardHeader className="pb-4">
             <div className="text-sm font-semibold text-slate-900">
-              Candidate snapshot
+              Integrity Alerts
             </div>
             <div className="text-sm text-slate-600">
-              Example candidate summary.
+              Suspicious activity detected during interviews.
             </div>
           </CardHeader>
           <CardBody className="grid gap-3">
-            <div className="rounded-xl bg-slate-50 p-4 ring-1 ring-slate-200">
-              <div className="text-sm font-semibold text-slate-900">
-                Alex Johnson
+            {alerts.length > 0 ? (
+              alerts.map((alert, idx) => (
+                <div key={idx} className="rounded-xl bg-rose-50 p-4 ring-1 ring-rose-200">
+                  <div className="text-sm font-semibold text-rose-900">{alert.type}</div>
+                  <div className="text-xs text-rose-700">{alert.message}</div>
+                </div>
+              ))
+            ) : (
+              <div className="rounded-xl bg-slate-50 p-5 text-sm text-slate-600 ring-1 ring-slate-200">
+                No active integrity alerts.
               </div>
-              <div className="mt-2 grid gap-1 text-sm text-slate-700">
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-600">Resume</span>
-                  <span className="font-medium">82%</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-600">Interview</span>
-                  <span className="font-medium">86%</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-600">Integrity</span>
-                  <span className="font-medium">91%</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid gap-2">
-              <Button onClick={generateReport} disabled={busy}>
-                {busy ? "Working..." : "Generate interview report"}
-              </Button>
-              <Button onClick={getDecision} variant="secondary" disabled={busy}>
-                Get hiring decision
-              </Button>
-              {reportFile && (
-                <Button
-                  as="a"
-                  href={`http://localhost:8000/reports/${reportFile}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  variant="secondary"
-                >
-                  Download report
-                </Button>
-              )}
-            </div>
+            )}
           </CardBody>
         </Card>
 
@@ -206,144 +168,42 @@ function RecruiterDashboard() {
           <Card>
             <CardHeader className="pb-4">
               <div className="text-sm font-semibold text-slate-900">
-                Jobs and interview questions
-              </div>
-              <div className="text-sm text-slate-600">
-                Create jobs with predefined interview questions.
+                Create New Job
               </div>
             </CardHeader>
             <CardBody className="grid gap-4">
               <form className="grid gap-3" onSubmit={createJob}>
                 <div className="space-y-1">
-                  <div className="text-xs font-medium text-slate-500">
-                    Job title
-                  </div>
+                  <div className="text-xs font-medium text-slate-500">Job title</div>
                   <input
-                    className="cb-input"
+                    className="cb-input w-full p-2 border rounded-md"
                     value={jobTitle}
                     onChange={(e) => setJobTitle(e.target.value)}
                     placeholder="e.g. Senior React Engineer"
                   />
                 </div>
                 <div className="space-y-1">
-                  <div className="text-xs font-medium text-slate-500">
-                    Job description
-                  </div>
+                  <div className="text-xs font-medium text-slate-500">Job description</div>
                   <textarea
-                    className="cb-textarea min-h-28"
+                    className="cb-input w-full p-2 border rounded-md min-h-[100px]"
                     value={jobDescription}
                     onChange={(e) => setJobDescription(e.target.value)}
-                    placeholder="Short description of the role…"
+                    placeholder="Describe the role requirements..."
                   />
                 </div>
                 <div className="space-y-1">
-                  <div className="text-xs font-medium text-slate-500">
-                    Interview questions (one per line)
-                  </div>
+                  <div className="text-xs font-medium text-slate-500">Interview Questions (one per line)</div>
                   <textarea
-                    className="cb-textarea min-h-28"
+                    className="cb-input w-full p-2 border rounded-md min-h-[80px]"
                     value={jobQuestions}
                     onChange={(e) => setJobQuestions(e.target.value)}
-                    placeholder="What experience do you have with React?\nHow do you structure a scalable frontend?"
+                    placeholder="What are the core technical questions for this role?"
                   />
                 </div>
                 <Button type="submit" disabled={busy}>
-                  {busy ? "Saving…" : "Create job"}
+                  {busy ? "Creating..." : "Post Job"}
                 </Button>
               </form>
-
-              <div className="mt-4">
-                {jobs.length === 0 ? (
-                  <div className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600 ring-1 ring-slate-200">
-                    No jobs created yet.
-                  </div>
-                ) : (
-                  <ul className="grid gap-2 text-sm text-slate-700">
-                    {jobs.map((job) => (
-                      <li
-                        key={job.id}
-                        className="rounded-xl bg-white p-3 ring-1 ring-slate-200"
-                      >
-                        <div className="font-semibold text-slate-900">
-                          {job.title}
-                        </div>
-                        <div className="mt-1 text-xs text-slate-500">
-                          Questions: {job.questions?.length ?? 0}
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </CardBody>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-4">
-              <div className="text-sm font-semibold text-slate-900">
-                Integrity alerts
-              </div>
-              <div className="text-sm text-slate-600">
-                Alerts posted during interview/proctoring.
-              </div>
-            </CardHeader>
-            <CardBody>
-              {alerts?.length ? (
-                <ul className="grid gap-2 text-sm text-slate-700">
-                  {alerts.map((alert, i) => (
-                    <li
-                      key={i}
-                      className="flex items-start justify-between gap-4 rounded-xl bg-white p-3 ring-1 ring-slate-200"
-                    >
-                      <span>{alert.message ?? JSON.stringify(alert)}</span>
-                      <span className="text-xs text-slate-500">
-                        {alert.type ?? "alert"}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <div className="rounded-xl bg-slate-50 p-5 text-sm text-slate-600 ring-1 ring-slate-200">
-                  No alerts received yet.
-                </div>
-              )}
-            </CardBody>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-4">
-              <div className="text-sm font-semibold text-slate-900">
-                Decision
-              </div>
-              <div className="text-sm text-slate-600">
-                Final score and recommendation.
-              </div>
-            </CardHeader>
-            <CardBody>
-              {decision ? (
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="rounded-xl bg-slate-50 p-4 ring-1 ring-slate-200">
-                    <div className="text-xs font-medium text-slate-500">
-                      Final score
-                    </div>
-                    <div className="mt-1 text-2xl font-semibold text-slate-900">
-                      {decision.final_score}
-                    </div>
-                  </div>
-                  <div className="rounded-xl bg-slate-50 p-4 ring-1 ring-slate-200">
-                    <div className="text-xs font-medium text-slate-500">
-                      Recommendation
-                    </div>
-                    <div className="mt-1 text-2xl font-semibold text-slate-900">
-                      {decision.decision}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="rounded-xl bg-slate-50 p-5 text-sm text-slate-600 ring-1 ring-slate-200">
-                  Request a hiring decision to see results here.
-                </div>
-              )}
             </CardBody>
           </Card>
         </div>

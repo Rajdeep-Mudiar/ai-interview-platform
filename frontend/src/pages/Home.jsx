@@ -2,8 +2,12 @@ import React from "react";
 import { motion } from "framer-motion";
 import Button from "../components/ui/Button";
 import { Card, CardBody } from "../components/ui/Card";
+import { getUserSession } from "../utils/auth";
 
 function Home() {
+  const session = getUserSession();
+  const isRecruiter = session?.role === "recruiter";
+
   return (
     <div className="cb-container py-10 sm:py-14">
       <div className="grid gap-10 lg:grid-cols-12 lg:items-center">
@@ -26,9 +30,11 @@ function Home() {
             <Button as="a" href="/interview-flow" size="lg">
               Start interview pipeline
             </Button>
-            <Button as="a" href="/recruiter-dashboard" variant="secondary" size="lg">
-              Open recruiter dashboard
-            </Button>
+            {isRecruiter && (
+              <Button as="a" href="/recruiter-dashboard" variant="secondary" size="lg">
+                Open recruiter dashboard
+              </Button>
+            )}
           </div>
 
           <div className="mt-6 flex flex-wrap gap-2 text-xs text-slate-500">

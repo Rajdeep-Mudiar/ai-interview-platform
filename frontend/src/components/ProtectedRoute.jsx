@@ -6,16 +6,19 @@ export default function ProtectedRoute({ children, role }) {
   const session = getUserSession();
   const location = useLocation();
 
+  console.log(`[AUTH CHECK] ${location.pathname}`, { session, requiredRole: role });
+
   if (!session) {
-    // Redirect to login but save the current location to redirect back after login
+    console.warn(`[AUTH FAILED] No session for ${location.pathname}, redirecting to /login`);
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   if (role && session.role !== role) {
-    // If user doesn't have the required role, redirect to their default dashboard
     const redirectPath = session.role === "recruiter" ? "/recruiter-dashboard" : "/dashboard";
+    console.warn(`[ROLE MISMATCH] Expected ${role}, got ${session.role}. Redirecting to ${redirectPath}`);
     return <Navigate to={redirectPath} replace />;
   }
 
+  console.log(`[AUTH SUCCESS] Access granted to ${location.pathname}`);
   return children;
 }
