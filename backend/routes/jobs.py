@@ -8,7 +8,6 @@ from database.mongo import get_jobs_col
 from models import JobCreate, JobUpdate, JobQuestion
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
-jobs_col = get_jobs_col()
 
 
 def _job_to_public(doc):
@@ -23,6 +22,7 @@ def _job_to_public(doc):
 
 @router.post("/", response_model=dict)
 def create_job(body: JobCreate):
+    jobs_col = get_jobs_col()
     doc = body.model_dump()
     result = jobs_col.insert_one(doc)
     doc["_id"] = result.inserted_id
@@ -31,6 +31,7 @@ def create_job(body: JobCreate):
 
 @router.get("/", response_model=list[dict])
 def list_jobs(recruiter_id: Optional[str] = None):
+    jobs_col = get_jobs_col()
     query = {}
     if recruiter_id:
         query["recruiter_id"] = recruiter_id
@@ -40,6 +41,7 @@ def list_jobs(recruiter_id: Optional[str] = None):
 
 @router.get("/{job_id}", response_model=dict)
 def get_job(job_id: str):
+    jobs_col = get_jobs_col()
     try:
         doc = jobs_col.find_one({"_id": ObjectId(job_id)})
     except Exception:
@@ -52,6 +54,7 @@ def get_job(job_id: str):
 
 @router.put("/{job_id}", response_model=dict)
 def update_job(job_id: str, body: JobUpdate):
+    jobs_col = get_jobs_col()
     try:
         oid = ObjectId(job_id)
     except Exception:
@@ -75,6 +78,7 @@ def update_job(job_id: str, body: JobUpdate):
 
 @router.delete("/{job_id}", response_model=dict)
 def delete_job(job_id: str):
+    jobs_col = get_jobs_col()
     try:
         oid = ObjectId(job_id)
     except Exception:

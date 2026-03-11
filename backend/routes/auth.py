@@ -10,7 +10,6 @@ from models import SignUpBody, SignInBody
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["auth"])
-users_col = get_users_col()
 
 def _user_to_public(doc):
     return {
@@ -28,6 +27,7 @@ def signup(body: SignUpBody):
     Explicit sign-up endpoint. 
     Checks if a user with the given email and role already exists.
     """
+    users_col = get_users_col()
     logger.info(f"Signup request received: {body.email} as {body.role}")
     if body.role not in {"candidate", "recruiter"}:
         raise HTTPException(status_code=400, detail="Invalid role. Must be 'candidate' or 'recruiter'.")
@@ -67,6 +67,7 @@ def signin(body: SignInBody):
     Explicit sign-in endpoint.
     Validates credentials against email and role.
     """
+    users_col = get_users_col()
     logger.info(f"Signin request received: {body.email} as {body.role}")
     if body.role not in {"candidate", "recruiter"}:
         raise HTTPException(status_code=400, detail="Invalid role.")

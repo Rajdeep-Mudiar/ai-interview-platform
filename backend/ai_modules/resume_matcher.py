@@ -2,21 +2,12 @@ import pdfplumber
 import re
 import logging
 import os
-import spacy
 from typing import List, Dict, Any, Set
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 # Configure logging
 logger = logging.getLogger(__name__)
-
-# Ensure Spacy model is loaded
-try:
-    nlp = spacy.load("en_core_web_sm")
-except OSError:
-    logger.info("Downloading spacy model 'en_core_web_sm'...")
-    os.system("python -m spacy download en_core_web_sm")
-    nlp = spacy.load("en_core_web_sm")
 
 # Expanded skills dictionary for better extraction
 SKILL_CATEGORIES = {

@@ -76,8 +76,8 @@ def get_jobs_col() -> Collection:
 def get_results_col() -> Collection:
     return MongoDB.get_collection("results")
 
-# Legacy compatibility (optional, but good for migration)
-db = MongoDB.get_db()
-users_col = get_users_col()
-jobs_col = get_jobs_col()
-results_col = get_results_col()
+# Export getters to be used as lazy-initialized properties
+# instead of calling them at module level.
+# This prevents blocking startup when importing the module.
+def get_db():
+    return MongoDB.get_db()

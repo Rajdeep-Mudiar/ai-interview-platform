@@ -2,12 +2,10 @@ from fastapi import APIRouter
 from database.mongo import get_jobs_col, get_results_col, get_users_col
 
 router = APIRouter(prefix="/stats", tags=["stats"])
-jobs_col = get_jobs_col()
-results_col = get_results_col()
-users_col = get_users_col()
 
 @router.get("/recruiter")
 async def get_recruiter_stats():
+    results_col = get_results_col()
     total_candidates = results_col.count_documents({})
     
     # Get top candidate by overallScore
@@ -21,6 +19,7 @@ async def get_recruiter_stats():
 
 @router.get("/candidate/{user_id}")
 async def get_candidate_stats(user_id: str):
+    results_col = get_results_col()
     user_results = list(results_col.find({"user_id": user_id}).sort("_id", -1))
     if not user_results:
         return {

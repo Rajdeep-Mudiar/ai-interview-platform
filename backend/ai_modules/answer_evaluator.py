@@ -1,7 +1,19 @@
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
+import logging
 
-model = SentenceTransformer('all-MiniLM-L6-v2')
+logger = logging.getLogger(__name__)
+
+# Global model holder for lazy loading
+_model = None
+
+def get_model():
+    global _model
+    if _model is None:
+        logger.info("⏳ Loading SentenceTransformer model ('all-MiniLM-L6-v2')...")
+        _model = SentenceTransformer('all-MiniLM-L6-v2')
+        logger.info("✅ SentenceTransformer model loaded successfully.")
+    return _model
 
 IDEAL_ANSWERS = {
     "react hooks":
@@ -19,6 +31,9 @@ def evaluate_answer(question, answer):
             ideal = IDEAL_ANSWERS[key]
     if not ideal:
         ideal = question
+    
+    # Lazy load the model on first use
+    model = get_model()
     embeddings = model.encode([ideal, answer])
     similarity = cosine_similarity([embeddings[0]], [embeddings[1]])[0][0]
     score = round(similarity * 10, 2)

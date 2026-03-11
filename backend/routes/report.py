@@ -11,10 +11,10 @@ from models import ReportRequest, InterviewResult
 import os
 
 router = APIRouter(prefix="/reports", tags=["reports"])
-results_col = get_results_col()
 
 @router.post("/generate")
 def create_report(data: ReportRequest):
+    results_col = get_results_col()
     try:
         # 1. Calculate Backend Logic
         # Convert integrity (100) to cheating flags (count) for calculate_final_score logic

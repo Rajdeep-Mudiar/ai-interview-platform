@@ -8,12 +8,23 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-try:
-    nlp = spacy.load("en_core_web_sm")
-except OSError:
-    logger.info("Downloading spacy model 'en_core_web_sm'...")
-    os.system("python -m spacy download en_core_web_sm")
-    nlp = spacy.load("en_core_web_sm")
+# Global NLP holder for lazy loading
+_nlp = None
+
+def get_nlp():
+    global _nlp
+    if _nlp is None:
+        try:
+            logger.info("⏳ Loading spacy model 'en_core_web_sm'...")
+            _nlp = spacy.load("en_core_web_sm")
+            logger.info("✅ Spacy model loaded successfully.")
+        except OSError:
+            logger.info("Downloading spacy model 'en_core_web_sm'...")
+            import subprocess
+            subprocess.run(["python", "-m", "spacy", "download", "en_core_web_sm"], check=True)
+            _nlp = spacy.load("en_core_web_sm")
+            logger.info("✅ Spacy model downloaded and loaded successfully.")
+    return _nlp
 
 SKILL_KEYWORDS = [
     "python", "java", "react", "node", "machine learning",
@@ -49,6 +60,9 @@ def parse_resume(file_path):
 
     # Clean text: remove extra whitespace and normalize
     text = re.sub(r'\s+', ' ', text)
+    
+    # Lazy load the NLP model on first use
+    nlp = get_nlp()
     doc = nlp(text)
 
     # Extract skills using both simple token match and entity recognition (if applicable)
