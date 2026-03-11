@@ -438,9 +438,10 @@ function Interview(props) {
   const generateReport = async () => {
     console.log("[REPORT] Starting report generation...");
     const session = getUserSession();
-    if (!session) {
-      console.error("[REPORT] No session found, cannot generate report.");
-      alert("You must be logged in to save results.");
+    const userId = session?.id || session?._id;
+    if (!userId) {
+      console.error("[REPORT] No session user ID found, cannot generate report.");
+      alert("You must be logged in to save results properly.");
       return;
     }
     
@@ -450,10 +451,10 @@ function Interview(props) {
       console.log("[REPORT] Calculated average interview score:", avgInterviewScore);
       
       const reportData = {
-        user_id: String(session.id), // Ensure string format
-        name: session.name,
-        email: session.email || "N/A",
-        phone: session.phone || "N/A",
+        user_id: String(userId), // Ensure string format
+        name: session?.name || "Candidate",
+        email: session?.email || "N/A",
+        phone: session?.phone || "N/A",
         job_title: location.state?.jobTitle || "General Interview",
         resume_score: location.state?.resume_score || 85, 
         interview_score: avgInterviewScore,

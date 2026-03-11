@@ -19,6 +19,7 @@ function Dashboard() {
   });
   
   const session = getUserSession();
+  const userId = session?.id || session?._id; // Handle both id and _id
   const displayName = session?.name || "Candidate";
   const API_BASE = "http://127.0.0.1:8000";
 
@@ -29,25 +30,25 @@ function Dashboard() {
   }, []);
 
   useEffect(() => {
-    if (session?.id) {
-      console.log("Fetching stats for user:", session.id);
-      axios.get(`${API_BASE}/stats/candidate/${session.id}`)
+    if (userId) {
+      console.log("Fetching stats for user:", userId);
+      axios.get(`${API_BASE}/stats/candidate/${userId}`)
         .then((res) => {
           console.log("Stats response:", res.data);
           setUserStats(res.data);
         })
         .catch(err => console.error("Stats fetch error:", err));
 
-      axios.get(`${API_BASE}/stats/candidate/${session.id}/history`)
+      axios.get(`${API_BASE}/stats/candidate/${userId}/history`)
         .then((res) => {
           console.log("History response:", res.data);
           setHistory(res.data.history || []);
         })
         .catch(err => console.error("History fetch error:", err));
     } else {
-      console.warn("No user session ID found for stats/history fetch");
+      console.warn("No user ID found in session (check both .id and ._id)");
     }
-  }, [session]);
+  }, [userId]);
 
   const generateReport = async () => {
     if (!history || history.length === 0) {
@@ -65,10 +66,10 @@ function Dashboard() {
       }
 
       const res = await axios.post(`${API_BASE}/reports/generate`, {
-        user_id: session.id,
+        user_id: userId,
         name: displayName,
-        email: session.email || "N/A",
-        phone: session.phone || "N/A",
+        email: session?.email || "N/A",
+        phone: session?.phone || "N/A",
         job_title: targetHistory.job_title || "General Interview",
         resume_score: targetHistory.resume_score || 80,
         interview_score: targetHistory.interview_score || (targetHistory.overall_score / 1.2), // Derived fallback

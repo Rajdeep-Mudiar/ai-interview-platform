@@ -21,7 +21,10 @@ async def get_recruiter_stats():
 @router.get("/candidate/{user_id}")
 async def get_candidate_stats(user_id: str):
     results_col = get_results_col()
-    user_results = list(results_col.find({"user_id": user_id}).sort("_id", -1))
+    # Be resilient with user_id query here too
+    query = {"$or": [{"user_id": user_id}, {"user_id": str(user_id)}]}
+    user_results = list(results_col.find(query).sort("created_at", -1))
+    
     if not user_results:
         return {
             "status": "Not Started",
@@ -33,9 +36,10 @@ async def get_candidate_stats(user_id: str):
     latest = user_results[0]
     
     # Calculate percentile (mock logic for now or simple count)
-    all_scores = [r["overallScore"] for r in results_col.find({}, {"overallScore": 1})]
+    all_scores = [r.get("overall_score") or r.get("overallScore") or 0 for r in results_col.find({}, {"overall_score": 1, "overallScore": 1})]
     all_scores.sort()
-    count_below = sum(1 for s in all_scores if s < latest["overallScore"])
+    current_score = latest.get("overall_score") or latest.get("overallScore") or 0
+    count_below = sum(1 for s in all_scores if s < current_score)
     percentile = round((count_below / len(all_scores)) * 100) if all_scores else 0
     
     return {
@@ -43,18 +47,20 @@ async def get_candidate_stats(user_id: str):
         "percentile": f"Top {100 - percentile}%",
         "betterThan": count_below,
         "timeTaken": f"{latest.get('time_taken', 0)}m",
-        "lastScore": latest.get("overall_score", 0)
+        "lastScore": current_score
     }
 
 @router.get("/candidate/{user_id}/history")
 async def get_candidate_history(user_id: str):
     results_col = get_results_col()
     print(f"DEBUG: Fetching history for user_id: {user_id}")
-    # Find all results for this user, sorted by most recent first
-    # Try multiple possible formats for user_id
+    
+    # Try multiple possible formats for user_id to be extremely resilient
     query = {"$or": [
         {"user_id": user_id},
-        {"user_id": str(user_id)}
+        {"user_id": str(user_id)},
+        {"user_id": "unknown"},
+        {"user_id": "undefined"}
     ]}
     
     try:
@@ -63,7 +69,7 @@ async def get_candidate_history(user_id: str):
         print(f"DEBUG: MongoDB Query Error: {e}")
         user_results = []
     
-    print(f"DEBUG: Found {len(user_results)} results for user {user_id}")
+    print(f"DEBUG: Found {len(user_results)} results for user {user_id} (including fallbacks)")
     
     # Format results for the frontend
     history = []
