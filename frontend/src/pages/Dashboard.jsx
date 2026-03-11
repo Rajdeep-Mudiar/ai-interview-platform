@@ -46,20 +46,29 @@ function Dashboard() {
     }
     setBusy(true);
     try {
-      const res = await axios.post(`${API_BASE}/generate-report`, {
+      // Find the latest history item to get its full details
+      const latestHistory = history[0];
+      
+      const res = await axios.post(`${API_BASE}/reports/generate`, {
+        user_id: session.id,
         name: displayName,
-        resume_score: userStats.lastScore,
-        interview_score: userStats.lastScore,
-        integrity_score: 100,
-        skills: [],
-        missing_skills: [],
-        recommendation: "Evaluation Pending",
+        email: session.email || "N/A",
+        phone: session.phone || "N/A",
+        job_title: latestHistory?.job_title || "General Interview",
+        resume_score: latestHistory?.resume_score || 80, // Fallback
+        interview_score: latestHistory?.interview_score || userStats.lastScore / 10,
+        integrity_score: latestHistory?.integrity_score || 100,
+        matched_skills: latestHistory?.matched_skills || [],
+        missing_skills: latestHistory?.missing_skills || [],
+        job_id: latestHistory?.job_id || null
       });
-      alert(`Report generated: ${res.data.file}`);
+      
       setResult({
-        final_score: userStats.lastScore,
-        recommendation: userStats.lastScore > 70 ? "Strong Fit" : "Needs Review"
+        final_score: res.data.overall_score,
+        recommendation: res.data.recommendation,
+        download_url: res.data.download_url
       });
+      alert(`Report generated successfully!`);
     } catch (err) {
       console.error("Report generation failed:", err);
       alert("Failed to generate report.");
@@ -68,8 +77,12 @@ function Dashboard() {
     }
   };
 
-  const generatePDF = () => {
-    alert("PDF download started...");
+  const generatePDF = async () => {
+    if (!result?.download_url) {
+      alert("Please select an interview from your history or generate a new report first.");
+      return;
+    }
+    window.open(result.download_url, "_blank");
   };
 
   const getExplanation = async () => {
@@ -143,7 +156,8 @@ function Dashboard() {
               <Card key={item.id} className="hover:ring-blue-300 transition-all cursor-pointer" onClick={() => {
                 setResult({
                   final_score: item.overall_score,
-                  recommendation: item.recommendation
+                  recommendation: item.recommendation,
+                  download_url: item.report_file ? `${API_BASE}/reports/download/${item.report_file}` : null
                 });
               }}>
                 <CardBody className="p-5">

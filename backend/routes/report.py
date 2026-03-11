@@ -50,8 +50,9 @@ def create_report(data: ReportRequest):
         
         # 3. Save to MongoDB Results collection
         try:
-            # Prepare data manually for insertion since InterviewResult might have strict Pydantic rules
-            # that are hard to satisfy with just os.getenv
+            # Generate PDF first to get filename
+            filename = generate_report(report_data)
+            
             result_doc_dict = {
                 "user_id": data.user_id if hasattr(data, 'user_id') and data.user_id else os.getenv("USER_ID_PLACEHOLDER", "unknown"),
                 "job_id": data.job_id,
@@ -67,16 +68,15 @@ def create_report(data: ReportRequest):
                 "missing_skills": data.missing_skills,
                 "recommendation": scoring_result["recommendation"],
                 "suggestions": reasons,
+                "report_file": filename,
                 "created_at": datetime.utcnow()
             }
             results_col.insert_one(result_doc_dict)
         except Exception as mongo_err:
             print(f"Failed to save result to MongoDB: {mongo_err}")
+            filename = generate_report(report_data) # Fallback if DB fails
         
-        # 4. Generate PDF
-        filename = generate_report(report_data)
-        
-        # 5. Return results (text + download)
+        # 4. Return results (text + download)
         return {
             "overall_score": scoring_result["final_score"],
             "recommendation": scoring_result["recommendation"],

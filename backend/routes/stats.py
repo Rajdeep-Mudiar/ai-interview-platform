@@ -58,10 +58,15 @@ async def get_candidate_history(user_id: str):
             "id": str(res["_id"]),
             "job_title": res.get("job_title", "General Interview"),
             "overall_score": res.get("overall_score", 0),
+            "resume_score": res.get("resume_score", 0),
+            "interview_score": res.get("interview_score", 0),
+            "integrity_score": res.get("integrity_score", 100),
             "recommendation": res.get("recommendation", "N/A"),
             "created_at": res.get("created_at"),
             "matched_skills": res.get("matched_skills", []),
-            "missing_skills": res.get("missing_skills", [])
+            "missing_skills": res.get("missing_skills", []),
+            "job_id": res.get("job_id"),
+            "report_file": res.get("report_file")
         })
         
     return {"history": history}
