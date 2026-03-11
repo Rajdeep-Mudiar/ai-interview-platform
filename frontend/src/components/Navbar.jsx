@@ -8,7 +8,6 @@ const baseNavItems = [
   { to: "/", label: "Home" },
   { to: "/jobs", label: "Jobs" },
   { to: "/resume-analysis", label: "Resume Analysis" },
-  { to: "/interview-flow", label: "Interview Pipeline" },
   { to: "/dashboard", label: "Candidate Dashboard" },
 ];
 
