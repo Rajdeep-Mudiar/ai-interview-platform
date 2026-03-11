@@ -29,6 +29,8 @@ function Interview(props) {
   const [interviewFinished, setInterviewFinished] = useState(false);
   const [totalScore, setTotalScore] = useState(0);
   const [scores, setScores] = useState([]);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recognition, setRecognition] = useState(null);
 
   const API_BASE = "http://127.0.0.1:8000";
 
@@ -260,14 +262,47 @@ function Interview(props) {
       alert("Speech recognition not supported in this browser.");
       return;
     }
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.lang = "en-US";
-    recognition.onresult = (event) => {
-      const transcript = event.results[0][0].transcript;
-      setAnswer(transcript);
+    
+    if (isRecording) {
+      recognition?.stop();
+      setIsRecording(false);
+      return;
+    }
+
+    const rec = new SpeechRecognition();
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.lang = "en-US";
+    
+    rec.onstart = () => {
+      setIsRecording(true);
+      setAnswer("");
     };
-    recognition.start();
+
+    rec.onresult = (event) => {
+      let finalTranscript = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscript += transcript;
+        }
+      }
+      if (finalTranscript) {
+        setAnswer(prev => prev + " " + finalTranscript);
+      }
+    };
+
+    rec.onerror = (event) => {
+      console.error("Speech recognition error:", event.error);
+      setIsRecording(false);
+    };
+
+    rec.onend = () => {
+      setIsRecording(false);
+    };
+
+    rec.start();
+    setRecognition(rec);
   }
 
   // AI answer evaluation
@@ -561,8 +596,13 @@ function Interview(props) {
                     >
                       Ask
                     </Button>
-                    <Button onClick={startRecording} variant="secondary" size="sm">
-                      Record
+                    <Button
+                      onClick={startRecording}
+                      variant={isRecording ? "danger" : "secondary"}
+                      size="sm"
+                      className={isRecording ? "animate-pulse" : ""}
+                    >
+                      {isRecording ? "Stop Recording" : "Record"}
                     </Button>
                     <Button onClick={submitAnswer} size="sm">
                       Submit
