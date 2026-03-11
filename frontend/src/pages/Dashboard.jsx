@@ -20,12 +20,6 @@ function Dashboard() {
   const session = getUserSession();
   const displayName = session?.name || "Candidate";
 
-  useEffect(() => {
-    if (!session) {
-      window.location.href = "/login";
-    }
-  }, [session]);
-
   const generateReport = async () => {
     setBusy(true);
     try {

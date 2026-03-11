@@ -10,6 +10,7 @@ import VoiceInterview from "./pages/VoiceInterview";
 import Dashboard from "./pages/Dashboard";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
+import ProtectedRoute from "./components/ProtectedRoute";
 import InterviewFlow from "./pages/InterviewFlow";
 
 import ResumeAnalysis from "./pages/ResumeAnalysis";
@@ -22,17 +23,29 @@ function App() {
       <Navbar />
       <main className="min-h-[calc(100vh-4rem)]">
         <Routes>
-          <Route path="/" element={<VideoLanding />} />
-          <Route path="/home" element={<Home />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/interview" element={<Interview />} />
-          <Route path="/interview-flow" element={<InterviewFlow />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/recruiter-dashboard" element={<RecruiterDashboard />} />
-          <Route path="/jobs" element={<Jobs />} />
-          <Route path="/report" element={<Report />} />
-          <Route path="/voice-interview" element={<VoiceInterview />} />
-          <Route path="/resume-analysis" element={<ResumeAnalysis />} />
+          <Route
+            path="/*"
+            element={
+              <ProtectedRoute>
+                <Routes>
+                  <Route path="/" element={<VideoLanding />} />
+                  <Route path="/home" element={<Home />} />
+                  <Route path="/interview" element={<Interview />} />
+                  <Route path="/interview-flow" element={<InterviewFlow />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route
+                    path="/recruiter-dashboard"
+                    element={<RecruiterDashboard />}
+                  />
+                  <Route path="/jobs" element={<Jobs />} />
+                  <Route path="/report" element={<Report />} />
+                  <Route path="/voice-interview" element={<VoiceInterview />} />
+                  <Route path="/resume-analysis" element={<ResumeAnalysis />} />
+                </Routes>
+              </ProtectedRoute>
+            }
+          />
         </Routes>
       </main>
       <Footer />

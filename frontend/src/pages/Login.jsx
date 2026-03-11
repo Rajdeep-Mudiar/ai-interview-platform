@@ -3,11 +3,16 @@ import Button from "../components/ui/Button";
 import { Card, CardBody, CardHeader } from "../components/ui/Card";
 import { HelperText, Input, Label } from "../components/ui/Form";
 import { useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { saveUserSession } from "../utils/auth";
 
 const API_BASE = "http://localhost:8000";
 
 function Login() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const from = location.state?.from?.pathname || "/";
+
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("candidate");
@@ -32,11 +37,17 @@ function Login() {
       const user = res.data; // { id, name, role }
       saveUserSession(user);
 
-      if (user.role === "recruiter") {
-        window.location.href = "/recruiter-dashboard";
+      // If there was a redirect source, go there. 
+      // Otherwise, go to default dashboard based on role.
+      if (location.state?.from) {
+        navigate(from, { replace: true });
+      } else if (user.role === "recruiter") {
+        navigate("/recruiter-dashboard", { replace: true });
       } else {
-        window.location.href = "/dashboard";
+        navigate("/dashboard", { replace: true });
       }
+    } catch (err) {
+      setError(err.response?.data?.detail || "An error occurred during sign in.");
     } finally {
       setBusy(false);
     }

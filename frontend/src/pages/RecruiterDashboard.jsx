@@ -25,16 +25,12 @@ function RecruiterDashboard() {
   const recruiterName = session?.name || "Recruiter";
 
   useEffect(() => {
-    if (!session) {
-      window.location.href = "/login";
-      return;
-    }
     axios.get("http://localhost:8000/alerts").then((res) => {
       setAlerts(res.data);
     });
     axios
       .get("http://localhost:8000/jobs", {
-        params: { recruiter_id: session.id },
+        params: { recruiter_id: session?.id },
       })
       .then((res) => setJobs(res.data));
   }, [session]);
