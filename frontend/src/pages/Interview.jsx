@@ -616,9 +616,12 @@ function Interview(props) {
                     <div className="text-xs font-medium text-slate-500">
                       Candidate answer
                     </div>
-                    <div className="mt-1 whitespace-pre-wrap text-sm text-slate-800">
-                      {answer || "No answer captured yet."}
-                    </div>
+                    <textarea
+                      className="mt-2 w-full min-h-[120px] p-3 text-sm text-slate-800 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 transition-all resize-none"
+                      value={answer}
+                      onChange={(e) => setAnswer(e.target.value)}
+                      placeholder="Type your answer here or use the 'Record' option..."
+                    />
                   </div>
 
                   {score !== null && (
