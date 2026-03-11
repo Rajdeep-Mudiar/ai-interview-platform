@@ -7,19 +7,27 @@ from pymongo import MongoClient
 from pymongo.database import Database
 from pymongo.collection import Collection
 from pymongo.errors import ConnectionFailure
+import certifi
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 # Robustly load .env from the backend/ directory
-env_path = Path(__file__).resolve().parents[1] / ".env"
+# Use a more stable path calculation
+import sys
+backend_root = Path(__file__).resolve().parents[1]
+env_path = backend_root / ".env"
 if env_path.exists():
     load_dotenv(dotenv_path=env_path)
     logger.info(f"Loaded environment variables from {env_path}")
 else:
-    load_dotenv() # Fallback to standard search
-    logger.warning(f".env file not found at {env_path}, falling back to default search.")
+    # Check if .env is in current working directory
+    if Path(".env").exists():
+        load_dotenv(dotenv_path=".env")
+        logger.info(f"Loaded environment variables from local .env")
+    else:
+        logger.warning(f".env file not found anywhere.")
 
 class MongoDB:
     """Centralized MongoDB connection management."""
@@ -40,7 +48,8 @@ class MongoDB:
                     serverSelectionTimeoutMS=10000,
                     connectTimeoutMS=10000,
                     retryWrites=True,
-                    w="majority"
+                    w="majority",
+                    tlsCAFile=certifi.where()
                 )
                 # Verify connection
                 cls._client.admin.command('ping')

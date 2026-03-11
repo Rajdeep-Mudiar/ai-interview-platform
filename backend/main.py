@@ -25,6 +25,7 @@ from routes.jobs import router as jobs_router
 from routes.stats import router as stats_router
 
 app = FastAPI()
+
 app.include_router(ranking_router)
 app.include_router(resume_router)
 app.include_router(question_router)

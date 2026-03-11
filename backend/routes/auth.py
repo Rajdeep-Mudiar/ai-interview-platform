@@ -21,7 +21,7 @@ def _user_to_public(doc):
         "created_at": doc.get("created_at")
     }
 
-@router.post("/signup")
+@router.post("/signup", status_code=201)
 def signup(body: SignUpBody):
     """
     Explicit sign-up endpoint. 
@@ -76,13 +76,22 @@ def signin(body: SignInBody):
     user = users_col.find_one({"email": body.email, "role": body.role})
     
     if not user:
-        logger.warning(f"Signin failed: User not found - {body.email} as {body.role}")
+        logger.warning(f"Signin failed: User not found with email '{body.email}' and role '{body.role}'")
         raise HTTPException(status_code=401, detail="Invalid email or password.")
 
     # Verify password
-    if not bcrypt.checkpw(body.password.encode("utf-8"), user["password_hash"]):
-        logger.warning(f"Signin failed: Incorrect password for {body.email}")
-        raise HTTPException(status_code=401, detail="Invalid email or password.")
+    try:
+        stored_hash = user["password_hash"]
+        # Ensure stored_hash is bytes (Pymongo usually handles this, but let's be safe)
+        if isinstance(stored_hash, str):
+            stored_hash = stored_hash.encode("utf-8")
+            
+        if not bcrypt.checkpw(body.password.encode("utf-8"), stored_hash):
+            logger.warning(f"Signin failed: Incorrect password for {body.email}")
+            raise HTTPException(status_code=401, detail="Invalid email or password.")
+    except Exception as e:
+        logger.error(f"Error during password verification: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error during authentication.")
 
     logger.info(f"User signed in successfully: {body.email} as {body.role}")
     return _user_to_public(user)

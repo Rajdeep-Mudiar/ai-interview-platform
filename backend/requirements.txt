@@ -9,6 +9,7 @@ pydantic[email]
 email-validator
 pymongo
 dnspython
+certifi
 python-dotenv
 bcrypt
 

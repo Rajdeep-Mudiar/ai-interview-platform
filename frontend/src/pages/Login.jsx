@@ -94,16 +94,23 @@ export default function Login() {
       
       let errorMsg = "An error occurred. Please check your credentials.";
       
-      if (err.response?.data?.detail) {
-        const detail = err.response.data.detail;
-        if (typeof detail === "string") {
-          errorMsg = detail;
-        } else if (Array.isArray(detail)) {
-          // FastAPI validation error list
-          errorMsg = detail.map(d => `${d.loc.join('.')}: ${d.msg}`).join(", ");
-        } else if (typeof detail === "object") {
-          errorMsg = JSON.stringify(detail);
+      if (err.response?.data) {
+        const data = err.response.data;
+        if (data.detail) {
+          const detail = data.detail;
+          if (typeof detail === "string") {
+            errorMsg = detail;
+          } else if (Array.isArray(detail)) {
+            // FastAPI validation error list: e.g. [{loc: ['body', 'email'], msg: 'invalid email', type: 'value_error'}]
+            errorMsg = detail.map(d => `${d.msg}`).join(", ");
+          } else if (typeof detail === "object") {
+            errorMsg = JSON.stringify(detail);
+          }
+        } else if (data.message) {
+          errorMsg = data.message;
         }
+      } else if (err.message) {
+        errorMsg = err.message;
       }
       
       setError(errorMsg);
