@@ -1,5 +1,5 @@
 from fastapi import APIRouter, UploadFile, Form, HTTPException
-from ai_modules.resume_matcher import analyze_resume, extract_text_from_pdf, calculate_match_details
+from ai_modules.resume_matcher import analyze_resume, extract_text_from_pdf, calculate_match_details, extract_skills_with_context
 from database.mongo import get_jobs_col
 from bson import ObjectId
 
@@ -18,14 +18,17 @@ async def match_jobs(file: UploadFile):
     if not resume_text:
         raise HTTPException(status_code=400, detail="Could not extract text from PDF.")
 
-    # 2. Fetch all jobs
+    # 2. Extract parsed skills
+    resume_skills = extract_skills_with_context(resume_text)
+
+    # 3. Fetch all jobs
     jobs_col = get_jobs_col()
     all_jobs = list(jobs_col.find({}))
     
     if not all_jobs:
-        return {"matches": []}
+        return {"matches": [], "resume_skills": resume_skills}
 
-    # 3. Match against each job
+    # 4. Match against each job
     matches = []
     for job in all_jobs:
         details = calculate_match_details(resume_text, job["description"])
@@ -42,7 +45,11 @@ async def match_jobs(file: UploadFile):
             "questions": job.get("questions", [])
         })
 
-    # 4. Sort by score descending
+    # 5. Sort by score descending
     matches.sort(key=lambda x: x["score"], reverse=True)
     
-    return {"matches": matches, "resume_text": resume_text[:1000]}
+    return {
+        "matches": matches, 
+        "resume_skills": resume_skills,
+        "resume_text": resume_text[:1000]
+    }

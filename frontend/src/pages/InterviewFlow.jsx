@@ -14,6 +14,7 @@ function InterviewFlow() {
   const [resume, setResume] = useState("");
   const [jd, setJd] = useState("");
   const [matches, setMatches] = useState([]);
+  const [parsedSkills, setParsedSkills] = useState(null);
 
   useEffect(() => {
     if (location.state) {
@@ -42,12 +43,14 @@ function InterviewFlow() {
             headers: { "Content-Type": "multipart/form-data" },
           });
           setMatch(res.data);
+          setParsedSkills(res.data.resume_skills || null);
           setMatches([]);
         } else {
           const res = await axios.post(`${API_BASE}/match-jobs`, formData, {
             headers: { "Content-Type": "multipart/form-data" },
           });
           setMatches(res.data.matches || []);
+          setParsedSkills(res.data.resume_skills || null);
           setMatch(null);
         }
       } else if (resume.trim() && jd.trim()) {
@@ -259,22 +262,50 @@ function InterviewFlow() {
         <div className="grid gap-6 lg:col-span-5">
           <Card>
             <CardHeader className="pb-4">
-              <div className="text-sm font-semibold text-slate-900">Match</div>
-              <div className="text-sm text-slate-600">Fit score and gaps.</div>
+              <div className="text-sm font-semibold text-slate-900">1. Resume Parser</div>
+              <div className="text-sm text-slate-600">Extracted skills from your resume.</div>
+            </CardHeader>
+            <CardBody>
+              {parsedSkills ? (
+                <div className="grid gap-3">
+                  {Object.entries(parsedSkills).map(([category, skills]) => (
+                    <div key={category} className="space-y-1">
+                      <div className="text-[10px] uppercase font-bold text-slate-400">{category}</div>
+                      <div className="flex flex-wrap gap-1">
+                        {skills.map(skill => (
+                          <span key={skill} className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px] border border-blue-100">
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-xl bg-slate-50 p-5 text-sm text-slate-600 ring-1 ring-slate-200 text-center">
+                  Upload a resume to see parsed skills.
+                </div>
+              )}
+            </CardBody>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-4">
+              <div className="text-sm font-semibold text-slate-900">2. Job Match</div>
+              <div className="text-sm text-slate-600">Best fits for your profile.</div>
             </CardHeader>
             <CardBody>
               {matches.length > 0 ? (
-                <div className="grid gap-3 max-h-[500px] overflow-y-auto pr-1">
-                  <div className="text-xs font-semibold text-slate-900 mb-1">Matching Jobs Found ({matches.length})</div>
+                <div className="grid gap-3 max-h-[400px] overflow-y-auto pr-1">
                   {matches.map((job) => (
-                    <div key={job.job_id} className="rounded-xl bg-white p-3 ring-1 ring-slate-200 hover:ring-blue-300 transition-all shadow-sm">
+                    <div key={job.job_id} className="rounded-xl bg-white p-3 ring-1 ring-slate-200 hover:ring-blue-300 transition-all shadow-sm border-l-4 border-l-blue-500">
                       <div className="flex justify-between items-start mb-1">
                         <div>
                           <h4 className="text-sm font-bold text-slate-900">{job.title}</h4>
                           <p className="text-[10px] text-slate-500">{job.company}</p>
                         </div>
                         <span className={`text-xs font-bold ${job.score > 70 ? 'text-emerald-600' : job.score > 40 ? 'text-amber-600' : 'text-slate-600'}`}>
-                          {job.score}%
+                          {job.score}% Match
                         </span>
                       </div>
                       <p className="text-[10px] text-slate-600 line-clamp-2 mb-2">{job.description_preview}</p>
@@ -301,27 +332,29 @@ function InterviewFlow() {
                 </div>
               ) : match ? (
                 <div className="grid gap-3">
-                  <div className="rounded-xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                  <div className="rounded-xl bg-slate-50 p-4 ring-1 ring-slate-200 border-l-4 border-l-emerald-500">
                     <div className="text-xs font-medium text-slate-500">
-                      Fit score
+                      Overall Match Score
                     </div>
                     <div className="mt-1 text-2xl font-semibold text-slate-900">
-                      {match.fit_score}%
+                      {match.score || match.fit_score}%
                     </div>
                   </div>
                   <div className="rounded-xl bg-white p-4 ring-1 ring-slate-200">
-                    <div className="text-xs font-medium text-slate-500">
-                      Missing skills
+                    <div className="text-xs font-medium text-slate-500 mb-2">
+                      Missing Critical Skills
                     </div>
-                    <div className="mt-1 text-sm text-slate-700">
+                    <div className="flex flex-wrap gap-1.5">
                       {match.missing_skills?.length
-                        ? match.missing_skills.join(", ")
+                        ? match.missing_skills.map(s => (
+                            <span key={s} className="px-2 py-0.5 bg-rose-50 text-rose-600 rounded text-[10px] border border-rose-100">{s}</span>
+                          ))
                         : "None detected."}
                     </div>
                   </div>
                 </div>
               ) : (
-                <div className="rounded-xl bg-slate-50 p-5 text-sm text-slate-600 ring-1 ring-slate-200">
+                <div className="rounded-xl bg-slate-50 p-5 text-sm text-slate-600 ring-1 ring-slate-200 text-center">
                   Analyze the inputs to see the match results.
                 </div>
               )}
