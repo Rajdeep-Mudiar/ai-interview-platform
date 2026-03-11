@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 import Button from "./ui/Button";
 import { cn } from "./ui/cn";
-import { getUserSession } from "../utils/auth";
+import { getUserSession, clearUserSession } from "../utils/auth";
 
 const baseNavItems = [
   { to: "/", label: "Home" },
@@ -34,6 +34,11 @@ export default function Navbar() {
   const session = getUserSession();
   const isRecruiter = session?.role === "recruiter";
 
+  const handleLogout = () => {
+    clearUserSession();
+    window.location.href = "/login";
+  };
+
   const navItems = isRecruiter
     ? [...baseNavItems, { to: "/recruiter-dashboard", label: "Recruiter" }]
     : baseNavItems;
@@ -61,15 +66,21 @@ export default function Navbar() {
           </nav>
 
           <div className="cb-navbar__actions">
-            <Button
-              as={Link}
-              to="/login"
-              variant="secondary"
-              size="sm"
-              className="cb-hide-sm"
-            >
-              Upload Resume
-            </Button>
+            {session ? (
+              <Button onClick={handleLogout} variant="secondary" size="sm" className="cb-hide-sm">
+                Logout
+              </Button>
+            ) : (
+              <Button
+                as={Link}
+                to="/login"
+                variant="secondary"
+                size="sm"
+                className="cb-hide-sm"
+              >
+                Upload Resume
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="sm"
@@ -94,15 +105,21 @@ export default function Navbar() {
                 </NavItem>
               ))}
               <div className="cb-mobileNav__cta">
-                <Button
-                  as={Link}
-                  to="/login"
-                  variant="secondary"
-                  className="w-full"
-                  onClick={() => setOpen(false)}
-                >
-                  Upload Resume
-                </Button>
+                {session ? (
+                  <Button onClick={handleLogout} variant="secondary" className="w-full">
+                    Logout
+                  </Button>
+                ) : (
+                  <Button
+                    as={Link}
+                    to="/login"
+                    variant="secondary"
+                    className="w-full"
+                    onClick={() => setOpen(false)}
+                  >
+                    Upload Resume
+                  </Button>
+                )}
               </div>
             </div>
           </div>

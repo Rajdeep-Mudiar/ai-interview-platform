@@ -1,12 +1,21 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import axios from "axios";
 import Button from "../components/ui/Button";
 import { Card, CardBody, CardHeader } from "../components/ui/Card";
 import { Label, Textarea } from "../components/ui/Form";
 
 function InterviewFlow() {
+  const location = useLocation();
   const [resume, setResume] = useState("");
   const [jd, setJd] = useState("");
+
+  useEffect(() => {
+    if (location.state) {
+      setResume(location.state.resume || "");
+      setJd(location.state.jd || "");
+    }
+  }, [location.state]);
   const [match, setMatch] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [suggestions, setSuggestions] = useState([]);
@@ -52,6 +61,23 @@ function InterviewFlow() {
         resume: resume,
       });
       setSuggestions(res.data.suggestions);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const saveInterview = async () => {
+    if (!match || !questions.length || !suggestions.length) return;
+    setBusy(true);
+    try {
+      await axios.post("http://localhost:8000/interview", {
+        resume: resume,
+        jd: jd,
+        fit_score: match.fit_score,
+        missing_skills: match.missing_skills,
+        questions: questions,
+        suggestions: suggestions,
+      });
     } finally {
       setBusy(false);
     }
@@ -121,6 +147,13 @@ function InterviewFlow() {
                 disabled={!match || busy}
               >
                 Get resume suggestions
+              </Button>
+              <Button
+                onClick={saveInterview}
+                variant="secondary"
+                disabled={!match || !questions.length || !suggestions.length || busy}
+              >
+                Save interview
               </Button>
             </div>
           </CardBody>

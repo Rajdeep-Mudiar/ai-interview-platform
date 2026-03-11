@@ -1,14 +1,15 @@
 import { useEffect, useState, useRef } from "react";
-import { Interview } from "./Interview";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import Button from "../components/ui/Button";
 import { Card, CardBody, CardHeader } from "../components/ui/Card";
 import { Input, Label, Textarea } from "../components/ui/Form";
 
 export default function ResumeAnalysis() {
+  const navigate = useNavigate();
   const [file, setFile] = useState(null);
   const [jd, setJd] = useState("");
   const [result, setResult] = useState(null);
-  const loadQuestionsRef = useRef(null);
   const [busy, setBusy] = useState(false);
 
   // If navigated from Jobs page with ?jobId=..., fetch job and prefill JD.
@@ -36,16 +37,17 @@ export default function ResumeAnalysis() {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("job_description", jd);
-      const res = await fetch("http://localhost:8000/analyze-resume", {
-        method: "POST",
-        body: formData,
+      const res = await axios.post("http://localhost:8000/analyze-resume", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
       });
-      const data = await res.json();
-      setResult(data);
-      // After analysis, call Interview's loadQuestions with resume_skills
-      if (data && data.resume_skills && loadQuestionsRef.current) {
-        loadQuestionsRef.current(data.resume_skills);
-      }
+      setResult(res.data);
+      
+      // Instead of navigating immediately, we show results here.
+      // If the user wants to start an interview, they can click a button below.
+    } catch (err) {
+      console.error("Analysis failed:", err);
     } finally {
       setBusy(false);
     }
@@ -150,6 +152,12 @@ export default function ResumeAnalysis() {
                       : "None detected."}
                   </div>
                 </div>
+                <Button 
+                  onClick={() => navigate("/interview-flow", { state: { resume: result.resume_text || file?.name, jd: jd } })}
+                  className="mt-2"
+                >
+                  Go to Interview Pipeline
+                </Button>
               </div>
             ) : (
               <div className="rounded-xl bg-slate-50 p-5 text-sm text-slate-600 ring-1 ring-slate-200">
@@ -159,9 +167,7 @@ export default function ResumeAnalysis() {
           </CardBody>
         </Card>
       </div>
-
-      {/* Hidden Interview component to expose loadQuestions */}
-      <Interview onLoadQuestions={(fn) => (loadQuestionsRef.current = fn)} />
     </div>
   );
 }
+

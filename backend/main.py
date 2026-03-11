@@ -12,6 +12,8 @@ from database.store import save_candidate
 from analytics.resume_advisor import resume_suggestions
 from ai_interviewer.ollama_questions import generate_ai_questions
 from analytics.emotion import analyze_emotions
+from leaderboard import router as leaderboard_router
+from pipeline_db import db, Interview
 
 from routes.ranking import router as ranking_router
 from routes.resume_analysis import router as resume_router
@@ -31,6 +33,7 @@ app.include_router(report_router)
 app.include_router(decision_router)
 app.include_router(auth_router)
 app.include_router(jobs_router)
+app.include_router(leaderboard_router)
 
 app.add_middleware(
 CORSMiddleware,
@@ -156,3 +159,8 @@ def ai_questions(data:dict):
 def emotion(data: dict):
     result = analyze_emotions(data["emotions"])
     return {"emotion_summary": result}
+
+@app.post("/interview")
+async def save_interview(interview: Interview):
+    db.interviews.insert_one(interview.dict())
+    return {"message": "Interview saved successfully"}

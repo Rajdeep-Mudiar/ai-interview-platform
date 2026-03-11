@@ -3,8 +3,16 @@ import axios from "axios";
 import Button from "../components/ui/Button";
 import { Card, CardBody, CardHeader } from "../components/ui/Card";
 import { getUserSession } from "../utils/auth";
+import Leaderboard from "../components/Leaderboard";
 
 function RecruiterDashboard() {
+  const [candidates, setCandidates] = useState([]);
+
+  useEffect(() => {
+    axios.get("http://localhost:8000/leaderboard").then((res) => {
+      setCandidates(res.data);
+    });
+  }, []);
   const [alerts, setAlerts] = useState([]);
   const [reportFile, setReportFile] = useState(null);
   const [decision, setDecision] = useState(null);
@@ -34,21 +42,18 @@ function RecruiterDashboard() {
   async function generateReport() {
     setBusy(true);
     try {
-      const res = await fetch("http://localhost:8000/generate-report", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: "Alex Johnson",
-          resume_score: 82,
-          interview_score: 86,
-          integrity_score: 91,
-          skills: ["Python", "React", "SQL"],
-          missing_skills: ["Docker", "AWS"],
-          recommendation: "Strong Hire",
-        }),
+      const res = await axios.post("http://localhost:8000/generate-report", {
+        name: "Alex Johnson",
+        resume_score: 82,
+        interview_score: 86,
+        integrity_score: 91,
+        skills: ["Python", "React", "SQL"],
+        missing_skills: ["Docker", "AWS"],
+        recommendation: "Strong Hire",
       });
-      const data = await res.json();
-      setReportFile(data.file);
+      setReportFile(res.data.file);
+    } catch (err) {
+      console.error("Report generation failed:", err);
     } finally {
       setBusy(false);
     }
@@ -57,17 +62,14 @@ function RecruiterDashboard() {
   async function getDecision() {
     setBusy(true);
     try {
-      const res = await fetch("http://localhost:8000/hiring-decision", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          resume_score: 82,
-          interview_score: 86,
-          integrity_score: 91,
-        }),
+      const res = await axios.post("http://localhost:8000/hiring-decision", {
+        resume_score: 82,
+        interview_score: 86,
+        integrity_score: 91,
       });
-      const data = await res.json();
-      setDecision(data);
+      setDecision(res.data);
+    } catch (err) {
+      console.error("Hiring decision failed:", err);
     } finally {
       setBusy(false);
     }
@@ -83,21 +85,18 @@ function RecruiterDashboard() {
       .filter(Boolean);
     setBusy(true);
     try {
-      const res = await fetch("http://localhost:8000/jobs/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          recruiter_id: session.id,
-          title: jobTitle,
-          description: jobDescription,
-          questions,
-        }),
+      const res = await axios.post("http://localhost:8000/jobs/", {
+        recruiter_id: session.id,
+        title: jobTitle,
+        description: jobDescription,
+        questions,
       });
-      const data = await res.json();
-      setJobs((prev) => [data, ...prev]);
+      setJobs((prev) => [res.data, ...prev]);
       setJobTitle("");
       setJobDescription("");
       setJobQuestions("");
+    } catch (err) {
+      console.error("Job creation failed:", err);
     } finally {
       setBusy(false);
     }
@@ -115,6 +114,33 @@ function RecruiterDashboard() {
             decision.
           </p>
         </div>
+      </div>
+
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Active Jobs</div>
+          <div className="mt-2 text-3xl font-bold text-slate-900">12</div>
+          <div className="mt-2 text-xs text-emerald-600 font-medium">+2 from last week</div>
+        </div>
+        <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Candidates</div>
+          <div className="mt-2 text-3xl font-bold text-slate-900">48</div>
+          <div className="mt-2 text-xs text-emerald-600 font-medium">+15% conversion</div>
+        </div>
+        <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Avg. Score</div>
+          <div className="mt-2 text-3xl font-bold text-slate-900">74%</div>
+          <div className="mt-2 text-xs text-amber-600 font-medium">-3% from benchmark</div>
+        </div>
+        <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Integrity Risk</div>
+          <div className="mt-2 text-3xl font-bold text-slate-900">Low</div>
+          <div className="mt-2 text-xs text-emerald-600 font-medium">98% passing</div>
+        </div>
+      </div>
+
+      <div className="mt-8">
+        <Leaderboard candidates={candidates} />
       </div>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-12">

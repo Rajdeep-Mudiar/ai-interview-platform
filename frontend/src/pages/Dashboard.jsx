@@ -4,8 +4,16 @@ import jsPDF from "jspdf";
 import Button from "../components/ui/Button";
 import { Card, CardBody, CardHeader } from "../components/ui/Card";
 import { getUserSession } from "../utils/auth";
+import Leaderboard from "../components/Leaderboard";
 
 function Dashboard() {
+  const [candidates, setCandidates] = useState([]);
+
+  useEffect(() => {
+    axios.get("http://localhost:8000/leaderboard").then((res) => {
+      setCandidates(res.data);
+    });
+  }, []);
   const [result, setResult] = useState(null);
   const [explanation, setExplanation] = useState([]);
   const [busy, setBusy] = useState(false);
@@ -73,9 +81,33 @@ function Dashboard() {
             Generate a final score, download a PDF, and request an explanation.
           </p>
         </div>
-        <div className="text-xs text-slate-500">
-          Demo values are currently hard-coded.
+      </div>
+
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Interview Status</div>
+          <div className="mt-2 text-2xl font-bold text-slate-900">Completed</div>
+          <div className="mt-2 flex items-center gap-2">
+            <div className="h-2 w-full bg-emerald-100 rounded-full overflow-hidden">
+               <div className="h-full bg-emerald-500 w-full" />
+            </div>
+            <span className="text-xs text-emerald-600 font-bold">100%</span>
+          </div>
         </div>
+        <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Global Percentile</div>
+          <div className="mt-2 text-2xl font-bold text-slate-900">Top 15%</div>
+          <div className="mt-2 text-xs text-emerald-600 font-medium">Better than 4,200 candidates</div>
+        </div>
+        <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Time Taken</div>
+          <div className="mt-2 text-2xl font-bold text-slate-900">24m 12s</div>
+          <div className="mt-2 text-xs text-slate-500 font-medium">Fastest in your cohort</div>
+        </div>
+      </div>
+
+      <div className="mt-8">
+        <Leaderboard candidates={candidates} />
       </div>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-12">

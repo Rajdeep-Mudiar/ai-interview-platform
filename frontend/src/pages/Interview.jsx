@@ -24,19 +24,22 @@ function Interview(props) {
   // Load questions from backend based on skills
   async function loadQuestions(skills) {
     setLoading(true);
-    const res = await fetch("http://localhost:8000/generate-questions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ skills }),
-    });
-    const data = await res.json();
-    setQuestions(data.questions);
-    setCurrent(0);
-    setProgress(0);
-    setScore(null);
-    setConcepts([]);
-    setAnswer("");
-    setLoading(false);
+    try {
+      const res = await axios.post("http://localhost:8000/generate_questions", {
+        matched_skills: skills,
+        missing_skills: [],
+      });
+      setQuestions(res.data.questions);
+      setCurrent(0);
+      setProgress(0);
+      setScore(null);
+      setConcepts([]);
+      setAnswer("");
+    } catch (err) {
+      console.error("Failed to load questions:", err);
+    } finally {
+      setLoading(false);
+    }
   }
   // Interview timer
   useEffect(() => {
@@ -193,9 +196,12 @@ function Interview(props) {
 
   // Voice Answer Recording
   function startRecording() {
-    const recognition = new (
-      window.SpeechRecognition || window.webkitSpeechRecognition
-    )();
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Speech recognition not supported in this browser.");
+      return;
+    }
+    const recognition = new SpeechRecognition();
     recognition.continuous = false;
     recognition.lang = "en-US";
     recognition.onresult = (event) => {
@@ -207,14 +213,15 @@ function Interview(props) {
 
   // AI answer evaluation
   async function evaluateAnswer(question, answer) {
-    const res = await fetch("http://localhost:8000/evaluate-answer", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question, answer }),
-    });
-    const data = await res.json();
-    setScore(data.score);
-    // Optionally: setConcepts(data.concepts || []);
+    try {
+      const res = await axios.post("http://localhost:8000/evaluate_answer", {
+        question,
+        answer,
+      });
+      setScore(res.data.score);
+    } catch (err) {
+      console.error("Evaluation failed:", err);
+    }
   }
 
   // Submit answer and get evaluation

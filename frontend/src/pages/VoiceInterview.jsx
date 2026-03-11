@@ -25,15 +25,17 @@ function VoiceInterview() {
   };
 
   const startListening = () => {
-    const recognition = new window.webkitSpeechRecognition();
-
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Speech recognition not supported in this browser.");
+      return;
+    }
+    const recognition = new SpeechRecognition();
     recognition.lang = "en-US";
-
     recognition.start();
 
     recognition.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
-
       setAnswer(transcript);
     };
   };
