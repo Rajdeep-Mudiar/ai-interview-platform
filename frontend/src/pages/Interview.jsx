@@ -440,6 +440,7 @@ function Interview(props) {
     const session = getUserSession();
     if (!session) {
       console.error("[REPORT] No session found, cannot generate report.");
+      alert("You must be logged in to save results.");
       return;
     }
     
@@ -449,17 +450,17 @@ function Interview(props) {
       console.log("[REPORT] Calculated average interview score:", avgInterviewScore);
       
       const reportData = {
-        user_id: session.id,
+        user_id: String(session.id), // Ensure string format
         name: session.name,
         email: session.email || "N/A",
         phone: session.phone || "N/A",
-        job_title: location.state?.jobTitle || "AI Developer",
+        job_title: location.state?.jobTitle || "General Interview",
         resume_score: location.state?.resume_score || 85, 
         interview_score: avgInterviewScore,
         integrity_score: integrity,
         matched_skills: location.state?.skills || [],
         missing_skills: location.state?.missing_skills || [],
-        job_id: location.state?.job_id || null
+        job_id: location.state?.job_id ? String(location.state.job_id) : null
       };
       
       console.log("[REPORT] Sending data to backend:", reportData);
@@ -470,9 +471,11 @@ function Interview(props) {
       setReportUrl(res.data.download_url);
       setBackendResult(res.data);
       console.log("[REPORT] State updated with report URL and backend results.");
+      alert("Interview saved to history successfully!");
     } catch (err) {
       console.error("[REPORT] Failed to generate report:", err);
-      alert("Error generating report. Please check if the backend is running and try again.");
+      const errorMsg = err.response?.data?.detail || "Error saving interview results.";
+      alert(errorMsg);
     } finally {
       setGeneratingReport(false);
     }

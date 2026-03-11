@@ -30,45 +30,61 @@ function Dashboard() {
 
   useEffect(() => {
     if (session?.id) {
-      axios.get(`${API_BASE}/stats/candidate/${session.id}`).then((res) => {
-        setUserStats(res.data);
-      });
-      axios.get(`${API_BASE}/stats/candidate/${session.id}/history`).then((res) => {
-        setHistory(res.data.history || []);
-      });
+      console.log("Fetching stats for user:", session.id);
+      axios.get(`${API_BASE}/stats/candidate/${session.id}`)
+        .then((res) => {
+          console.log("Stats response:", res.data);
+          setUserStats(res.data);
+        })
+        .catch(err => console.error("Stats fetch error:", err));
+
+      axios.get(`${API_BASE}/stats/candidate/${session.id}/history`)
+        .then((res) => {
+          console.log("History response:", res.data);
+          setHistory(res.data.history || []);
+        })
+        .catch(err => console.error("History fetch error:", err));
+    } else {
+      console.warn("No user session ID found for stats/history fetch");
     }
   }, [session]);
 
   const generateReport = async () => {
-    if (!userStats.lastScore) {
-      alert("No interview results found. Please complete an interview first.");
+    if (!history || history.length === 0) {
+      alert("No interview results found in your history. Please complete an interview first.");
       return;
     }
     setBusy(true);
     try {
-      // Find the latest history item to get its full details
-      const latestHistory = history[0];
+      // Use the most recent history item if no item is currently selected in 'result'
+      const targetHistory = result?.id ? history.find(h => h.id === result.id) : history[0];
       
+      if (!targetHistory) {
+        alert("Could not find interview details. Please select an interview from your history list.");
+        return;
+      }
+
       const res = await axios.post(`${API_BASE}/reports/generate`, {
         user_id: session.id,
         name: displayName,
         email: session.email || "N/A",
         phone: session.phone || "N/A",
-        job_title: latestHistory?.job_title || "General Interview",
-        resume_score: latestHistory?.resume_score || 80, // Fallback
-        interview_score: latestHistory?.interview_score || userStats.lastScore / 10,
-        integrity_score: latestHistory?.integrity_score || 100,
-        matched_skills: latestHistory?.matched_skills || [],
-        missing_skills: latestHistory?.missing_skills || [],
-        job_id: latestHistory?.job_id || null
+        job_title: targetHistory.job_title || "General Interview",
+        resume_score: targetHistory.resume_score || 80,
+        interview_score: targetHistory.interview_score || (targetHistory.overall_score / 1.2), // Derived fallback
+        integrity_score: targetHistory.integrity_score || 100,
+        matched_skills: targetHistory.matched_skills || [],
+        missing_skills: targetHistory.missing_skills || [],
+        job_id: targetHistory.job_id || null
       });
       
       setResult({
+        id: targetHistory.id,
         final_score: res.data.overall_score,
         recommendation: res.data.recommendation,
         download_url: res.data.download_url
       });
-      alert(`Report generated successfully!`);
+      alert(`Report refreshed successfully!`);
     } catch (err) {
       console.error("Report generation failed:", err);
       alert("Failed to generate report.");
@@ -78,24 +94,36 @@ function Dashboard() {
   };
 
   const generatePDF = async () => {
-    if (!result?.download_url) {
-      alert("Please select an interview from your history or generate a new report first.");
+    if (result?.download_url) {
+      window.open(result.download_url, "_blank");
       return;
     }
-    window.open(result.download_url, "_blank");
+    
+    if (history && history.length > 0) {
+      const latest = history[0];
+      if (latest.report_file) {
+        window.open(`${API_BASE}/reports/download/${latest.report_file}`, "_blank");
+        return;
+      }
+    }
+
+    alert("No PDF found for your latest interview. Please click 'Generate final report' first.");
   };
 
   const getExplanation = async () => {
-    if (!userStats.lastScore) {
-      alert("No interview results found.");
+    const targetHistory = result?.id ? history.find(h => h.id === result.id) : history[0];
+    
+    if (!targetHistory) {
+      alert("No interview results found. Please complete an interview first.");
       return;
     }
+
     setBusy(true);
     try {
       const res = await axios.post(`${API_BASE}/hiring-decision`, {
-        resume_score: userStats.lastScore,
-        interview_score: userStats.lastScore,
-        integrity_score: 100,
+        resume_score: targetHistory.resume_score || 70,
+        interview_score: targetHistory.interview_score || 70,
+        integrity_score: targetHistory.integrity_score || 100,
       });
       setExplanation([res.data.explanation]);
     } catch (err) {
@@ -153,8 +181,9 @@ function Dashboard() {
         {history.length > 0 ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {history.map((item) => (
-              <Card key={item.id} className="hover:ring-blue-300 transition-all cursor-pointer" onClick={() => {
+              <Card key={item.id} className={`hover:ring-blue-300 transition-all cursor-pointer ${result?.id === item.id ? 'ring-2 ring-blue-500 shadow-md' : ''}`} onClick={() => {
                 setResult({
+                  id: item.id,
                   final_score: item.overall_score,
                   recommendation: item.recommendation,
                   download_url: item.report_file ? `${API_BASE}/reports/download/${item.report_file}` : null

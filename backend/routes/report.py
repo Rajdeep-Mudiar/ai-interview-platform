@@ -53,9 +53,12 @@ def create_report(data: ReportRequest):
             # Generate PDF first to get filename
             filename = generate_report(report_data)
             
+            # Use user_id from data if available, otherwise handle placeholder
+            user_id = data.user_id if hasattr(data, 'user_id') and data.user_id else "unknown"
+            
             result_doc_dict = {
-                "user_id": data.user_id if hasattr(data, 'user_id') and data.user_id else os.getenv("USER_ID_PLACEHOLDER", "unknown"),
-                "job_id": data.job_id,
+                "user_id": str(user_id), # Ensure it's a string
+                "job_id": str(data.job_id) if data.job_id else None,
                 "name": data.name,
                 "email": data.email,
                 "phone": data.phone,
@@ -72,8 +75,9 @@ def create_report(data: ReportRequest):
                 "created_at": datetime.utcnow()
             }
             results_col.insert_one(result_doc_dict)
+            print(f"DEBUG: Saved result to MongoDB for user {user_id}")
         except Exception as mongo_err:
-            print(f"Failed to save result to MongoDB: {mongo_err}")
+            print(f"CRITICAL: Failed to save result to MongoDB: {mongo_err}")
             filename = generate_report(report_data) # Fallback if DB fails
         
         # 4. Return results (text + download)

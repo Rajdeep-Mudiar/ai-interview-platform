@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 from database.mongo import get_jobs_col, get_results_col, get_users_col
+from datetime import datetime
 
 router = APIRouter(prefix="/stats", tags=["stats"])
 
@@ -48,21 +49,37 @@ async def get_candidate_stats(user_id: str):
 @router.get("/candidate/{user_id}/history")
 async def get_candidate_history(user_id: str):
     results_col = get_results_col()
+    print(f"DEBUG: Fetching history for user_id: {user_id}")
     # Find all results for this user, sorted by most recent first
-    user_results = list(results_col.find({"user_id": user_id}).sort("created_at", -1))
+    # Try multiple possible formats for user_id
+    query = {"$or": [
+        {"user_id": user_id},
+        {"user_id": str(user_id)}
+    ]}
+    
+    try:
+        user_results = list(results_col.find(query).sort("created_at", -1))
+    except Exception as e:
+        print(f"DEBUG: MongoDB Query Error: {e}")
+        user_results = []
+    
+    print(f"DEBUG: Found {len(user_results)} results for user {user_id}")
     
     # Format results for the frontend
     history = []
     for res in user_results:
+        # Debug the actual document structure
+        # print(f"DEBUG: Found document: {res}")
+        
         history.append({
             "id": str(res["_id"]),
-            "job_title": res.get("job_title", "General Interview"),
-            "overall_score": res.get("overall_score", 0),
+            "job_title": res.get("job_title") or res.get("jobTitle") or "General Interview",
+            "overall_score": res.get("overall_score") or res.get("overallScore") or 0,
             "resume_score": res.get("resume_score", 0),
             "interview_score": res.get("interview_score", 0),
             "integrity_score": res.get("integrity_score", 100),
             "recommendation": res.get("recommendation", "N/A"),
-            "created_at": res.get("created_at"),
+            "created_at": res.get("created_at") or datetime.utcnow(),
             "matched_skills": res.get("matched_skills", []),
             "missing_skills": res.get("missing_skills", []),
             "job_id": res.get("job_id"),
