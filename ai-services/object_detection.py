@@ -38,7 +38,7 @@ while True:
                 print("ALERT: Phone detected")
 
                 requests.post(
-                    "http://localhost:8000/alert",
+                    "http://127.0.0.1:8000/alert",
                     json={
                         "type":"phone_detected",
                         "message":"Candidate using phone"

@@ -17,9 +17,10 @@ export default function ResumeAnalysis() {
     const params = new URLSearchParams(window.location.search);
     const jobId = params.get("jobId");
     if (!jobId) return;
+    const API_BASE = "http://127.0.0.1:8000";
     async function loadJob() {
       try {
-        const res = await fetch(`http://localhost:8000/jobs/${jobId}`);
+        const res = await fetch(`${API_BASE}/jobs/${jobId}`);
         if (!res.ok) return;
         const job = await res.json();
         setJd(job.description || "");
@@ -33,11 +34,12 @@ export default function ResumeAnalysis() {
   async function analyze() {
     if (!file || !jd.trim()) return;
     setBusy(true);
+    const API_BASE = "http://127.0.0.1:8000";
     try {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("job_description", jd);
-      const res = await axios.post("http://localhost:8000/analyze-resume", formData, {
+      const res = await axios.post(`${API_BASE}/analyze-resume`, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
@@ -193,10 +195,19 @@ export default function ResumeAnalysis() {
                 )}
 
                 <Button 
-                  onClick={() => navigate("/interview-flow", { state: { resume: result.resume_text || file?.name, jd: jd } })}
+                  onClick={() => {
+                    // Extract all skills from result.resume_skills
+                    const allSkills = Object.values(result.resume_skills || {}).flat();
+                    navigate("/interview", { 
+                      state: { 
+                        skills: allSkills,
+                        missing_skills: result.missing_skills || []
+                      } 
+                    });
+                  }}
                   className="mt-2 w-full"
                 >
-                  Proceed to Interview
+                  Proceed to Video Interview
                 </Button>
               </div>
             ) : (

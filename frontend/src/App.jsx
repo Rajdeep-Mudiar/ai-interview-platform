@@ -43,6 +43,7 @@ function App() {
             <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
             
             {/* Candidate Pipeline */}
+            <Route path="/jobs" element={<ProtectedRoute><Jobs /></ProtectedRoute>} />
             <Route path="/resume-analysis" element={<ProtectedRoute><ResumeAnalysis /></ProtectedRoute>} />
             <Route path="/interview-flow" element={<ProtectedRoute><InterviewFlow /></ProtectedRoute>} />
             <Route path="/interview" element={<ProtectedRoute><Interview /></ProtectedRoute>} />
@@ -60,7 +61,6 @@ function App() {
             />
 
             {/* Recruiter Tools */}
-            <Route path="/jobs" element={<ProtectedRoute role="recruiter"><Jobs /></ProtectedRoute>} />
             <Route
               path="/recruiter-dashboard"
               element={

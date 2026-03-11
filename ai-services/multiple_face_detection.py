@@ -45,10 +45,10 @@ while True:
         print("ALERT: Multiple people detected!")
 
         requests.post(
-        "http://localhost:8000/alert",
+        "http://127.0.0.1:8000/alert",
         json={
             "type":"multiple_person",
-            "message":"More than one person detected"
+            "message":"Multiple people detected"
         }
     )
 

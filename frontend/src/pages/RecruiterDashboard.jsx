@@ -8,11 +8,8 @@ import Leaderboard from "../components/Leaderboard";
 function RecruiterDashboard() {
   const [candidates, setCandidates] = useState([]);
   const [stats, setStats] = useState({
-    activeJobs: 0,
-    totalCandidates: 0,
-    avgScore: "0%",
-    integrityRisk: "—",
-    integrityRate: "0% passing"
+    candidatesJoined: 0,
+    topCandidateName: "—"
   });
 
   const session = getUserSession();
@@ -111,26 +108,14 @@ function RecruiterDashboard() {
         </div>
       </div>
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
         <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-          <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Active Jobs</div>
-          <div className="mt-2 text-3xl font-bold text-slate-900">{stats.activeJobs}</div>
-          <div className="mt-2 text-xs text-slate-500 font-medium">Real-time count</div>
+          <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">No of candidates joined</div>
+          <div className="mt-2 text-3xl font-bold text-slate-900">{stats.candidatesJoined}</div>
         </div>
         <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-          <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Candidates</div>
-          <div className="mt-2 text-3xl font-bold text-slate-900">{stats.totalCandidates}</div>
-          <div className="mt-2 text-xs text-slate-500 font-medium">Total evaluated</div>
-        </div>
-        <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-          <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Avg. Score</div>
-          <div className="mt-2 text-3xl font-bold text-slate-900">{stats.avgScore}</div>
-          <div className="mt-2 text-xs text-slate-500 font-medium">System wide average</div>
-        </div>
-        <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-          <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Integrity Risk</div>
-          <div className="mt-2 text-3xl font-bold text-slate-900">{stats.integrityRisk}</div>
-          <div className="mt-2 text-xs text-emerald-600 font-medium">{stats.integrityRate}</div>
+          <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Top candidate name</div>
+          <div className="mt-2 text-3xl font-bold text-slate-900">{stats.topCandidateName}</div>
         </div>
       </div>
 

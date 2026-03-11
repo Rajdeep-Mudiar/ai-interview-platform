@@ -1,10 +1,12 @@
 import React, { useRef, useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import axios from "axios";
 import * as faceapi from "face-api.js";
 import Button from "../components/ui/Button";
 import { Card, CardBody, CardHeader } from "../components/ui/Card";
 
 function Interview(props) {
+  const location = useLocation();
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const [questions, setQuestions] = useState([]);
@@ -20,14 +22,37 @@ function Interview(props) {
   const [emotion, setEmotion] = useState(null);
   const [behavior, setBehavior] = useState(null);
   const [behaviorScore, setBehaviorScore] = useState(0);
+  const [backendAlerts, setBackendAlerts] = useState([]);
+
+  const API_BASE = "http://127.0.0.1:8000";
+
+  // Polling for backend alerts from AI services
+  useEffect(() => {
+    const fetchAlerts = async () => {
+      try {
+        const res = await axios.get(`${API_BASE}/alerts`);
+        if (res.data.length > backendAlerts.length) {
+          const latestAlert = res.data[res.data.length - 1];
+          setAlert(latestAlert.message || latestAlert.type);
+          setBackendAlerts(res.data);
+          // Decrease integrity for backend-detected cheating
+          setIntegrity((prev) => Math.max(prev - 10, 0));
+        }
+      } catch (err) {
+        console.error("Failed to fetch alerts:", err);
+      }
+    };
+    const interval = setInterval(fetchAlerts, 5000);
+    return () => clearInterval(interval);
+  }, [backendAlerts]);
 
   // Load questions from backend based on skills
-  async function loadQuestions(skills) {
+  async function loadQuestions(matched_skills, missing_skills = []) {
     setLoading(true);
     try {
-      const res = await axios.post("http://localhost:8000/generate_questions", {
-        matched_skills: skills,
-        missing_skills: [],
+      const res = await axios.post(`${API_BASE}/generate_questions`, {
+        matched_skills: matched_skills,
+        missing_skills: missing_skills,
       });
       setQuestions(res.data.questions);
       setCurrent(0);
@@ -41,6 +66,13 @@ function Interview(props) {
       setLoading(false);
     }
   }
+
+  // Effect to load questions from location state if available
+  useEffect(() => {
+    if (location.state && location.state.skills) {
+      loadQuestions(location.state.skills, location.state.missing_skills || []);
+    }
+  }, [location.state]);
   // Interview timer
   useEffect(() => {
     const timer = setInterval(() => {
@@ -174,7 +206,7 @@ function Interview(props) {
 
   const sendGazeAlert = async () => {
     try {
-      await axios.post("http://localhost:8000/alert", {
+      await axios.post(`${API_BASE}/alert`, {
         type: "Eye Movement",
         message: "Candidate looking away",
       });
@@ -214,7 +246,7 @@ function Interview(props) {
   // AI answer evaluation
   async function evaluateAnswer(question, answer) {
     try {
-      const res = await axios.post("http://localhost:8000/evaluate_answer", {
+      const res = await axios.post(`${API_BASE}/evaluate_answer`, {
         question,
         answer,
       });
@@ -265,9 +297,11 @@ function Interview(props) {
                 </p>
               </div>
             </div>
-            <Button onClick={generate} variant="secondary">
-              Start interview
-            </Button>
+            {questions.length === 0 && (
+              <Button onClick={generate} variant="secondary">
+                Start interview
+              </Button>
+            )}
           </div>
 
           <Card>
@@ -426,7 +460,7 @@ function Interview(props) {
                 </>
               ) : (
                 <div className="rounded-2xl bg-slate-50 p-5 text-sm text-slate-600 ring-1 ring-slate-200">
-                  Start the interview to load questions.
+                  {loading ? "Loading interview questions…" : "Start the interview to load questions."}
                 </div>
               )}
             </CardBody>

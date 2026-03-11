@@ -8,24 +8,15 @@ users_col = get_users_col()
 
 @router.get("/recruiter")
 async def get_recruiter_stats():
-    active_jobs = jobs_col.count_documents({})
     total_candidates = results_col.count_documents({})
     
-    pipeline = [
-        {"$group": {"_id": None, "avgScore": {"$avg": "$overallScore"}}}
-    ]
-    avg_score_res = list(results_col.aggregate(pipeline))
-    avg_score = round(avg_score_res[0]["avgScore"], 1) if avg_score_res else 0
-    
-    integrity_pass = results_col.count_documents({"integrity": {"$gt": 80}})
-    integrity_rate = round((integrity_pass / total_candidates * 100), 1) if total_candidates > 0 else 100
+    # Get top candidate by overallScore
+    top_candidate = results_col.find_one(sort=[("overallScore", -1)])
+    top_candidate_name = top_candidate.get("name", "N/A") if top_candidate else "N/A"
     
     return {
-        "activeJobs": active_jobs,
-        "totalCandidates": total_candidates,
-        "avgScore": f"{avg_score}%",
-        "integrityRisk": "Low" if integrity_rate > 90 else "Medium",
-        "integrityRate": f"{integrity_rate}% passing"
+        "candidatesJoined": total_candidates,
+        "topCandidateName": top_candidate_name
     }
 
 @router.get("/candidate/{user_id}")

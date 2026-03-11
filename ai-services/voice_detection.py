@@ -2,48 +2,96 @@ import whisper
 import pyaudio
 import wave
 import requests
+import time
+import os
+import logging
 
-model = whisper.load_model("base")
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
-audio = pyaudio.PyAudio()
+class VoiceProctor:
+    def __init__(self, api_url="http://127.0.0.1:8000/alert", model_size="base"):
+        self.api_url = api_url
+        logger.info(f"Loading Whisper model ({model_size})...")
+        self.model = whisper.load_model(model_size)
+        self.audio = pyaudio.PyAudio()
+        self.temp_filename = "temp_voice.wav"
 
-stream = audio.open(
-    format=pyaudio.paInt16,
-    channels=1,
-    rate=16000,
-    input=True,
-    frames_per_buffer=1024
-)
+    def record_chunk(self, seconds=5):
+        """Record a short chunk of audio."""
+        chunk = 1024
+        sample_format = pyaudio.paInt16
+        channels = 1
+        fs = 16000
+        
+        stream = self.audio.open(
+            format=sample_format,
+            channels=channels,
+            rate=fs,
+            input=True,
+            frames_per_buffer=chunk
+        )
 
-print("Listening for background speech...")
+        frames = []
+        for _ in range(0, int(fs / chunk * seconds)):
+            data = stream.read(chunk)
+            frames.append(data)
 
-frames = []
+        stream.stop_stream()
+        stream.close()
 
-for i in range(0, int(16000 / 1024 * 5)):  # record 5 seconds
-    data = stream.read(1024)
-    frames.append(data)
+        # Save to temporary file
+        wf = wave.open(self.temp_filename, "wb")
+        wf.setnchannels(channels)
+        wf.setsampwidth(self.audio.get_sample_size(sample_format))
+        wf.setframerate(fs)
+        wf.writeframes(b"".join(frames))
+        wf.close()
 
-wf = wave.open("temp.wav", "wb")
-wf.setnchannels(1)
-wf.setsampwidth(audio.get_sample_size(pyaudio.paInt16))
-wf.setframerate(16000)
-wf.writeframes(b"".join(frames))
-wf.close()
+    def analyze_audio(self):
+        """Transcribe and check for speech."""
+        if not os.path.exists(self.temp_filename):
+            return
 
-result = model.transcribe("temp.wav")
+        result = self.model.transcribe(self.temp_filename, fp16=False)
+        text = result.get("text", "").strip()
+        
+        if len(text) > 10: # Minimum character threshold to avoid noise
+            logger.info(f"Detected Speech: {text}")
+            self.send_alert(text)
+        
+        # Cleanup
+        try:
+            os.remove(self.temp_filename)
+        except:
+            pass
 
-text = result["text"]
+    def send_alert(self, detected_text):
+        try:
+            requests.post(
+                self.api_url,
+                json={
+                    "type": "background_voice",
+                    "message": f"Possible assistance detected: '{detected_text}'"
+                },
+                timeout=2
+            )
+        except Exception as e:
+            logger.error(f"Failed to send voice alert: {e}")
 
-print("Detected Speech:", text)
+    def run(self):
+        logger.info("Voice Proctoring Active (Continuous monitoring)...")
+        try:
+            while True:
+                self.record_chunk(seconds=5)
+                self.analyze_audio()
+                time.sleep(0.5) # Short pause between chunks
+        except KeyboardInterrupt:
+            logger.info("Voice Proctoring stopped.")
+        finally:
+            self.audio.terminate()
 
-if len(text.strip()) > 5:
-
-    print("ALERT: Background speech detected")
-
-    requests.post(
-        "http://localhost:8000/alert",
-        json={
-            "type":"background_voice",
-            "message":"Possible external assistance detected"
-        }
-    )
+if __name__ == "__main__":
+    proctor = VoiceProctor()
+    proctor.run()
