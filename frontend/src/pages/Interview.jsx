@@ -33,6 +33,7 @@ function Interview(props) {
   const [recognition, setRecognition] = useState(null);
   const [backendResult, setBackendResult] = useState(null);
   const [isInterviewStarted, setIsInterviewStarted] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
   const API_BASE = "http://127.0.0.1:8000";
   const AI_SERVICE_BASE = "http://127.0.0.1:8001";
@@ -241,10 +242,26 @@ function Interview(props) {
 
   // Text-to-Speech
   function speak(text) {
+    if (!text) return;
+    
+    // Cancel any existing speech
+    window.speechSynthesis.cancel();
+    
+    // If recording, stop it first
+    if (isRecording) {
+      recognition?.stop();
+      setIsRecording(false);
+    }
+
     const speech = new window.SpeechSynthesisUtterance(text);
     speech.lang = "en-US";
     speech.rate = 1;
     speech.pitch = 1;
+    
+    speech.onstart = () => setIsSpeaking(true);
+    speech.onend = () => setIsSpeaking(false);
+    speech.onerror = () => setIsSpeaking(false);
+    
     window.speechSynthesis.speak(speech);
   }
 
@@ -285,46 +302,66 @@ function Interview(props) {
       return;
     }
     
+    // Stop any existing speech synthesis
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+    }
+    
     if (isRecording) {
-      recognition?.stop();
+      try {
+        recognition?.stop();
+      } catch (err) {
+        console.warn("Failed to stop recognition properly:", err);
+      }
       setIsRecording(false);
       return;
     }
 
-    const rec = new SpeechRecognition();
-    rec.continuous = true;
-    rec.interimResults = true;
-    rec.lang = "en-US";
-    
-    rec.onstart = () => {
-      setIsRecording(true);
-      setAnswer("");
-    };
+    try {
+      const rec = new SpeechRecognition();
+      rec.continuous = true;
+      rec.interimResults = true;
+      rec.lang = "en-US";
+      
+      rec.onstart = () => {
+        setIsRecording(true);
+      };
 
-    rec.onresult = (event) => {
-      let finalTranscript = "";
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const transcript = event.results[i][0].transcript;
-        if (event.results[i].isFinal) {
-          finalTranscript += transcript;
+      rec.onresult = (event) => {
+        let finalTranscript = "";
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalTranscript += transcript;
+          }
         }
-      }
-      if (finalTranscript) {
-        setAnswer(prev => prev + " " + finalTranscript);
-      }
-    };
+        if (finalTranscript) {
+          setAnswer(prev => {
+            const trimmed = prev.trim();
+            return (trimmed ? trimmed + " " : "") + finalTranscript.trim();
+          });
+        }
+      };
 
-    rec.onerror = (event) => {
-      console.error("Speech recognition error:", event.error);
+      rec.onerror = (event) => {
+        console.error("Speech recognition error:", event.error);
+        if (event.error === 'not-allowed') {
+          alert("Microphone access denied. Please enable it to use voice recording.");
+        }
+        setIsRecording(false);
+      };
+
+      rec.onend = () => {
+        setIsRecording(false);
+      };
+
+      rec.start();
+      setRecognition(rec);
+    } catch (err) {
+      console.error("Failed to start recording:", err);
       setIsRecording(false);
-    };
-
-    rec.onend = () => {
-      setIsRecording(false);
-    };
-
-    rec.start();
-    setRecognition(rec);
+    }
   }
 
   // AI answer evaluation
@@ -342,6 +379,14 @@ function Interview(props) {
 
   // Submit answer and get evaluation
   const submitAnswer = async () => {
+    // Stop any active audio
+    window.speechSynthesis.cancel();
+    setIsSpeaking(false);
+    if (isRecording) {
+      recognition?.stop();
+      setIsRecording(false);
+    }
+
     try {
       const res = await axios.post(`${API_BASE}/evaluate_answer`, {
         question: questions[current],
@@ -363,6 +408,14 @@ function Interview(props) {
 
   // Ask next question
   const nextQuestion = async () => {
+    // Stop any active audio
+    window.speechSynthesis.cancel();
+    setIsSpeaking(false);
+    if (isRecording) {
+      recognition?.stop();
+      setIsRecording(false);
+    }
+
     if (current + 1 < questions.length) {
       setCurrent(current + 1);
       setAnswer("");
@@ -639,23 +692,35 @@ function Interview(props) {
                   <div className="flex flex-wrap gap-2">
                     <Button
                       onClick={() => speak(questions[current])}
-                      variant="secondary"
+                      variant={isSpeaking ? "emerald" : "secondary"}
                       size="sm"
+                      disabled={!isInterviewStarted || isRecording}
+                      className={isSpeaking ? "animate-pulse" : ""}
                     >
-                      Ask
+                      {isSpeaking ? "Speaking..." : "Ask"}
                     </Button>
                     <Button
                       onClick={startRecording}
                       variant={isRecording ? "danger" : "secondary"}
                       size="sm"
                       className={isRecording ? "animate-pulse" : ""}
+                      disabled={!isInterviewStarted || isSpeaking}
                     >
                       {isRecording ? "Stop Recording" : "Record"}
                     </Button>
-                    <Button onClick={submitAnswer} size="sm">
+                    <Button 
+                      onClick={submitAnswer} 
+                      size="sm"
+                      disabled={!isInterviewStarted || !answer.trim() || isRecording}
+                    >
                       Submit
                     </Button>
-                    <Button onClick={nextQuestion} variant="ghost" size="sm">
+                    <Button 
+                      onClick={nextQuestion} 
+                      variant="ghost" 
+                      size="sm"
+                      disabled={!isInterviewStarted}
+                    >
                       Next
                     </Button>
                   </div>
@@ -665,10 +730,11 @@ function Interview(props) {
                       Candidate answer
                     </div>
                     <textarea
-                      className="mt-2 w-full min-h-[120px] p-3 text-sm text-slate-800 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 transition-all resize-none"
+                      className="mt-2 w-full min-h-[120px] p-3 text-sm text-slate-800 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 transition-all resize-none disabled:opacity-50"
                       value={answer}
                       onChange={(e) => setAnswer(e.target.value)}
-                      placeholder="Type your answer here or use the 'Record' option..."
+                      placeholder={isInterviewStarted ? "Type your answer here or use the 'Record' option..." : "Click 'Start Proctored Interview' above to begin."}
+                      disabled={!isInterviewStarted || isRecording}
                     />
                   </div>
 
