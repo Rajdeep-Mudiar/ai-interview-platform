@@ -32,7 +32,7 @@ function RecruiterDashboard() {
   const [jobs, setJobs] = useState([]);
   const [jobTitle, setJobTitle] = useState("");
   const [jobDescription, setJobDescription] = useState("");
-  const [jobQuestions, setJobQuestions] = useState("");
+  const [jobQuestions, setJobQuestions] = useState([{ question: "", answer: "" }]);
 
   useEffect(() => {
     axios.get(`${API_BASE}/alerts`).then((res) => {
@@ -47,15 +47,30 @@ function RecruiterDashboard() {
     }
   }, [session]);
 
+  const addQuestion = () => {
+    setJobQuestions([...jobQuestions, { question: "", answer: "" }]);
+  };
+
+  const updateQuestion = (index, field, value) => {
+    const newQuestions = [...jobQuestions];
+    newQuestions[index][field] = value;
+    setJobQuestions(newQuestions);
+  };
+
+  const removeQuestion = (index) => {
+    if (jobQuestions.length > 1) {
+      const newQuestions = jobQuestions.filter((_, i) => i !== index);
+      setJobQuestions(newQuestions);
+    }
+  };
+
   const createJob = async (e) => {
     e.preventDefault();
     if (!jobTitle || !jobDescription) return;
     setBusy(true);
     try {
-      // Split questions by newline and filter empty strings
-      const questionsList = jobQuestions
-        ? jobQuestions.split("\n").map(q => q.trim()).filter(q => q)
-        : [];
+      // Filter empty strings
+      const questionsList = jobQuestions.filter(q => q.question.trim());
 
       await axios.post(`${API_BASE}/jobs/`, {
         title: jobTitle,
@@ -66,7 +81,7 @@ function RecruiterDashboard() {
       alert("Job created successfully!");
       setJobTitle("");
       setJobDescription("");
-      setJobQuestions("");
+      setJobQuestions([{ question: "", answer: "" }]);
       // Refresh jobs list
       const res = await axios.get(`${API_BASE}/jobs/`, {
         params: { recruiter_id: session?.id },
@@ -177,13 +192,46 @@ function RecruiterDashboard() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <div className="text-xs font-medium text-slate-500">Interview Questions (one per line)</div>
-                  <textarea
-                    className="cb-input w-full p-2 border rounded-md min-h-[80px]"
-                    value={jobQuestions}
-                    onChange={(e) => setJobQuestions(e.target.value)}
-                    placeholder="What are the core technical questions for this role?"
-                  />
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs font-medium text-slate-500">Interview Questions</div>
+                    <button
+                      type="button"
+                      onClick={addQuestion}
+                      className="text-xs font-medium text-blue-600 hover:text-blue-700"
+                    >
+                      + Add Question
+                    </button>
+                  </div>
+                  <div className="space-y-2">
+                    {jobQuestions.map((q, index) => (
+                      <div key={index} className="flex flex-col gap-2 p-3 bg-slate-50 rounded-lg ring-1 ring-slate-200">
+                        <div className="flex items-center justify-between">
+                          <div className="text-[10px] font-bold uppercase text-slate-400">Question {index + 1}</div>
+                          {jobQuestions.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => removeQuestion(index)}
+                              className="text-rose-500 hover:text-rose-600"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
+                        <input
+                          className="cb-input w-full p-2 border rounded-md"
+                          value={q.question}
+                          onChange={(e) => updateQuestion(index, "question", e.target.value)}
+                          placeholder="What is the technical question?"
+                        />
+                        <textarea
+                          className="cb-input w-full p-2 border rounded-md min-h-[60px] text-xs"
+                          value={q.answer}
+                          onChange={(e) => updateQuestion(index, "answer", e.target.value)}
+                          placeholder="Ideal technical answer (for AI scoring reference)..."
+                        />
+                      </div>
+                    ))}
+                  </div>
                 </div>
                 <Button type="submit" disabled={busy}>
                   {busy ? "Creating..." : "Post Job"}

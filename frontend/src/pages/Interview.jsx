@@ -4,6 +4,7 @@ import axios from "axios";
 import * as faceapi from "face-api.js";
 import Button from "../components/ui/Button";
 import { Card, CardBody, CardHeader } from "../components/ui/Card";
+import { getUserSession } from "../utils/auth";
 
 function Interview(props) {
   const location = useLocation();
@@ -23,6 +24,11 @@ function Interview(props) {
   const [behavior, setBehavior] = useState(null);
   const [behaviorScore, setBehaviorScore] = useState(0);
   const [backendAlerts, setBackendAlerts] = useState([]);
+  const [reportUrl, setReportUrl] = useState(null);
+  const [generatingReport, setGeneratingReport] = useState(false);
+  const [interviewFinished, setInterviewFinished] = useState(false);
+  const [totalScore, setTotalScore] = useState(0);
+  const [scores, setScores] = useState([]);
 
   const API_BASE = "http://127.0.0.1:8000";
 
@@ -47,14 +53,21 @@ function Interview(props) {
   }, [backendAlerts]);
 
   // Load questions from backend based on skills
-  async function loadQuestions(matched_skills, missing_skills = []) {
+  async function loadQuestions(matched_skills, missing_skills = [], recruiterQuestions = []) {
     setLoading(true);
     try {
-      const res = await axios.post(`${API_BASE}/generate_questions`, {
-        matched_skills: matched_skills,
-        missing_skills: missing_skills,
-      });
-      setQuestions(res.data.questions);
+      // If recruiter provided questions, use them. Otherwise, generate AI questions.
+      if (recruiterQuestions && recruiterQuestions.length > 0) {
+        // Handle both string array and object array [{question, answer}]
+        const qs = recruiterQuestions.map(q => typeof q === 'string' ? q : q.question);
+        setQuestions(qs);
+      } else {
+        const res = await axios.post(`${API_BASE}/generate_questions`, {
+          matched_skills: matched_skills,
+          missing_skills: missing_skills,
+        });
+        setQuestions(res.data.questions);
+      }
       setCurrent(0);
       setProgress(0);
       setScore(null);
@@ -69,8 +82,11 @@ function Interview(props) {
 
   // Effect to load questions from location state if available
   useEffect(() => {
-    if (location.state && location.state.skills) {
-      loadQuestions(location.state.skills, location.state.missing_skills || []);
+    if (location.state) {
+      const { skills, missing_skills, jobQuestions } = location.state;
+      if (skills || jobQuestions) {
+        loadQuestions(skills || [], missing_skills || [], jobQuestions || []);
+      }
     }
   }, [location.state]);
   // Interview timer
@@ -80,6 +96,17 @@ function Interview(props) {
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // Monitor integrity score to stop interview if it hits 0
+  useEffect(() => {
+    if (integrity <= 0 && !interviewFinished) {
+      setAlert("Interview terminated due to multiple integrity violations.");
+      setInterviewFinished(true);
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      }
+    }
+  }, [integrity, interviewFinished]);
 
   useEffect(() => {
     async function loadModels() {
@@ -258,11 +285,23 @@ function Interview(props) {
 
   // Submit answer and get evaluation
   const submitAnswer = async () => {
-    await evaluateAnswer(questions[current], answer);
-    // Auto next question after short delay
-    setTimeout(() => {
-      nextQuestion();
-    }, 1500);
+    try {
+      const res = await axios.post(`${API_BASE}/evaluate_answer`, {
+        question: questions[current],
+        answer: answer,
+      });
+      const newScore = res.data.score;
+      setScore(newScore);
+      setScores(prev => [...prev, newScore]);
+      setTotalScore(prev => prev + newScore);
+      
+      // Auto next question after short delay
+      setTimeout(() => {
+        nextQuestion();
+      }, 1500);
+    } catch (err) {
+      console.error("Evaluation failed:", err);
+    }
   };
 
   // Ask next question
@@ -276,6 +315,47 @@ function Interview(props) {
     } else {
       // Interview finished
       setProgress(100);
+      setInterviewFinished(true);
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      }
+    }
+  };
+
+  const generateReport = async () => {
+    const session = getUserSession();
+    if (!session) return;
+    
+    setGeneratingReport(true);
+    try {
+      const avgInterviewScore = scores.length > 0 ? (totalScore / scores.length) * 10 : 0;
+      
+      const reportData = {
+        name: session.name,
+        email: session.email || "N/A",
+        phone: session.phone || "N/A",
+        job_title: location.state?.jobTitle || "AI Developer",
+        overall_score: Math.round((avgInterviewScore * 0.5) + (integrity * 0.5)),
+        resume_score: 85, // Placeholder or fetch from previous step if possible
+        interview_score: Math.round(avgInterviewScore),
+        integrity_score: integrity,
+        matched_skills: location.state?.skills || [],
+        missing_skills: location.state?.missing_skills || [],
+        recommendation: avgInterviewScore > 70 && integrity > 80 ? "Strong Hire" : (avgInterviewScore > 50 ? "Consider" : "Reject"),
+        suggestions: [
+          "Improve technical depth in core areas.",
+          "Maintain better eye contact during responses.",
+          "Practice articulating complex architectural patterns."
+        ]
+      };
+
+      const res = await axios.post(`${API_BASE}/reports/generate`, reportData);
+      setReportUrl(res.data.download_url);
+    } catch (err) {
+      console.error("Failed to generate report:", err);
+      alert("Error generating report. Please try again.");
+    } finally {
+      setGeneratingReport(false);
     }
   };
 
@@ -360,13 +440,67 @@ function Interview(props) {
                 </div>
               </div>
 
-              <div className="aspect-video overflow-hidden rounded-2xl bg-slate-900 ring-1 ring-slate-200">
+              <div className="aspect-video overflow-hidden rounded-2xl bg-slate-900 ring-1 ring-slate-200 relative">
                 <video
                   ref={videoRef}
                   autoPlay
                   muted
                   className="h-full w-full object-cover"
                 />
+                {interviewFinished && (
+                  <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-slate-900/90 p-6 text-center text-white backdrop-blur-sm">
+                    {integrity > 0 ? (
+                      <>
+                        <div className="mb-4 rounded-full bg-emerald-500/20 p-4 ring-2 ring-emerald-500/50">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                        <h2 className="text-xl font-bold sm:text-2xl">Interview Completed!</h2>
+                        <p className="mt-2 text-sm text-slate-300">Your performance has been analyzed by our AI.</p>
+                      </>
+                    ) : (
+                      <>
+                        <div className="mb-4 rounded-full bg-rose-500/20 p-4 ring-2 ring-rose-500/50">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </div>
+                        <h2 className="text-xl font-bold sm:text-2xl text-rose-500">Interview Terminated</h2>
+                        <p className="mt-2 text-sm text-slate-300">The session was closed due to multiple integrity alerts.</p>
+                      </>
+                    )}
+                    
+                    <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                      {integrity > 0 ? (
+                        !reportUrl ? (
+                          <Button 
+                            onClick={generateReport} 
+                            disabled={generatingReport}
+                            className="bg-emerald-600 hover:bg-emerald-700"
+                          >
+                            {generatingReport ? "Generating Report..." : "Generate Final Report"}
+                          </Button>
+                        ) : (
+                          <Button 
+                            as="a" 
+                            href={reportUrl} 
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-blue-600 hover:bg-blue-700"
+                          >
+                            Download PDF Report
+                          </Button>
+                        )
+                      ) : (
+                        <div className="text-xs text-slate-400 italic">No report available for terminated sessions.</div>
+                      )}
+                      <Button as="a" href="/dashboard" variant="secondary">
+                        Go to Dashboard
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="grid gap-2 sm:grid-cols-3">

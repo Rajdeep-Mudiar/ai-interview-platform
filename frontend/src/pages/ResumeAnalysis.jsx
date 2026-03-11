@@ -9,6 +9,7 @@ export default function ResumeAnalysis() {
   const navigate = useNavigate();
   const [file, setFile] = useState(null);
   const [jd, setJd] = useState("");
+  const [jobQuestions, setJobQuestions] = useState([]);
   const [result, setResult] = useState(null);
   const [busy, setBusy] = useState(false);
 
@@ -24,6 +25,7 @@ export default function ResumeAnalysis() {
         if (!res.ok) return;
         const job = await res.json();
         setJd(job.description || "");
+        setJobQuestions(job.questions || []);
       } catch {
         // ignore
       }
@@ -201,7 +203,8 @@ export default function ResumeAnalysis() {
                     navigate("/interview", { 
                       state: { 
                         skills: allSkills,
-                        missing_skills: result.missing_skills || []
+                        missing_skills: result.missing_skills || [],
+                        jobQuestions: jobQuestions
                       } 
                     });
                   }}
