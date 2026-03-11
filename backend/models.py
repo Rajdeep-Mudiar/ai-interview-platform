@@ -63,6 +63,7 @@ class InterviewResult(BaseModel):
 
 # --- Report Models ---
 class ReportRequest(BaseModel):
+    user_id: Optional[str] = None
     name: str
     email: Optional[str] = "N/A"
     phone: Optional[str] = "N/A"

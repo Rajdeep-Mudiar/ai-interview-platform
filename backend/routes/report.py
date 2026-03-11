@@ -7,6 +7,7 @@ from analytics.scoring import calculate_final_score
 from analytics.explain import generate_explanation
 from analytics.integrity import cheating_risk
 from database.mongo import get_results_col
+from datetime import datetime
 from models import ReportRequest, InterviewResult
 import os
 
@@ -49,23 +50,26 @@ def create_report(data: ReportRequest):
         
         # 3. Save to MongoDB Results collection
         try:
-            result_doc = InterviewResult(
-                user_id=os.getenv("USER_ID_PLACEHOLDER", "unknown"), # Ideally passed from frontend session
-                job_id=data.job_id,
-                name=data.name,
-                email=data.email,
-                phone=data.phone,
-                job_title=data.job_title,
-                resume_score=data.resume_score,
-                interview_score=data.interview_score,
-                integrity_score=data.integrity_score,
-                overall_score=scoring_result["final_score"],
-                matched_skills=data.matched_skills,
-                missing_skills=data.missing_skills,
-                recommendation=scoring_result["recommendation"],
-                suggestions=reasons
-            )
-            results_col.insert_one(result_doc.model_dump())
+            # Prepare data manually for insertion since InterviewResult might have strict Pydantic rules
+            # that are hard to satisfy with just os.getenv
+            result_doc_dict = {
+                "user_id": data.user_id if hasattr(data, 'user_id') and data.user_id else os.getenv("USER_ID_PLACEHOLDER", "unknown"),
+                "job_id": data.job_id,
+                "name": data.name,
+                "email": data.email,
+                "phone": data.phone,
+                "job_title": data.job_title,
+                "resume_score": data.resume_score,
+                "interview_score": data.interview_score,
+                "integrity_score": data.integrity_score,
+                "overall_score": scoring_result["final_score"],
+                "matched_skills": data.matched_skills,
+                "missing_skills": data.missing_skills,
+                "recommendation": scoring_result["recommendation"],
+                "suggestions": reasons,
+                "created_at": datetime.utcnow()
+            }
+            results_col.insert_one(result_doc_dict)
         except Exception as mongo_err:
             print(f"Failed to save result to MongoDB: {mongo_err}")
         

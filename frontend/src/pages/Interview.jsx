@@ -449,6 +449,7 @@ function Interview(props) {
       console.log("[REPORT] Calculated average interview score:", avgInterviewScore);
       
       const reportData = {
+        user_id: session.id,
         name: session.name,
         email: session.email || "N/A",
         phone: session.phone || "N/A",
