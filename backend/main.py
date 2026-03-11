@@ -26,6 +26,14 @@ from routes.stats import router as stats_router
 
 app = FastAPI()
 
+# IMPORTANT: Add CORS middleware BEFORE including any routers
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.include_router(ranking_router)
 app.include_router(resume_router)
 app.include_router(question_router)
@@ -36,13 +44,6 @@ app.include_router(auth_router)
 app.include_router(jobs_router)
 app.include_router(stats_router)
 app.include_router(leaderboard_router)
-
-app.add_middleware(
-CORSMiddleware,
-allow_origins=["*"],
-allow_methods=["*"],
-allow_headers=["*"],
-)
 
 alerts = []
 
