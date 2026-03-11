@@ -204,7 +204,9 @@ export default function ResumeAnalysis() {
                       state: { 
                         skills: allSkills,
                         missing_skills: result.missing_skills || [],
-                        jobQuestions: jobQuestions
+                        jobQuestions: jobQuestions,
+                        resume_score: result.score,
+                        jobTitle: jd.split("\n")[0].substring(0, 30) // Simple job title extraction
                       } 
                     });
                   }}

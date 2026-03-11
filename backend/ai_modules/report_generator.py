@@ -66,11 +66,15 @@ def generate_report(data):
     # Scores Section
     story.append(Paragraph("Assessment Scores", header_style))
     
+    interview_display = data.get('interview_score', 0)
+    # If it's a raw average (0-10), scale it to 100 for the report if needed, 
+    # but the scoring logic already does some scaling. Let's just show it.
+    
     scores_data = [
         ["Metric", "Score"],
         ["Overall Match", f"{data.get('overall_score', 0)}%"],
         ["Resume Fit", f"{data.get('resume_score', 0)}%"],
-        ["Interview Performance", f"{data.get('interview_score', 0)}%"],
+        ["Interview Performance", f"{round(interview_display * 10, 1)}%"],
         ["Integrity & Trust", f"{data.get('integrity_score', 0)}%"]
     ]
     

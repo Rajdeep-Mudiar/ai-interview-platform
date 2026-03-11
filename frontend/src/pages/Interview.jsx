@@ -31,6 +31,7 @@ function Interview(props) {
   const [scores, setScores] = useState([]);
   const [isRecording, setIsRecording] = useState(false);
   const [recognition, setRecognition] = useState(null);
+  const [backendResult, setBackendResult] = useState(null);
 
   const API_BASE = "http://127.0.0.1:8000";
 
@@ -363,29 +364,23 @@ function Interview(props) {
     
     setGeneratingReport(true);
     try {
-      const avgInterviewScore = scores.length > 0 ? (totalScore / scores.length) * 10 : 0;
+      const avgInterviewScore = scores.length > 0 ? (totalScore / scores.length) : 0;
       
       const reportData = {
         name: session.name,
         email: session.email || "N/A",
         phone: session.phone || "N/A",
         job_title: location.state?.jobTitle || "AI Developer",
-        overall_score: Math.round((avgInterviewScore * 0.5) + (integrity * 0.5)),
-        resume_score: 85, // Placeholder or fetch from previous step if possible
-        interview_score: Math.round(avgInterviewScore),
+        resume_score: location.state?.resume_score || 85, 
+        interview_score: avgInterviewScore,
         integrity_score: integrity,
         matched_skills: location.state?.skills || [],
-        missing_skills: location.state?.missing_skills || [],
-        recommendation: avgInterviewScore > 70 && integrity > 80 ? "Strong Hire" : (avgInterviewScore > 50 ? "Consider" : "Reject"),
-        suggestions: [
-          "Improve technical depth in core areas.",
-          "Maintain better eye contact during responses.",
-          "Practice articulating complex architectural patterns."
-        ]
+        missing_skills: location.state?.missing_skills || []
       };
 
       const res = await axios.post(`${API_BASE}/reports/generate`, reportData);
       setReportUrl(res.data.download_url);
+      setBackendResult(res.data);
     } catch (err) {
       console.error("Failed to generate report:", err);
       alert("Error generating report. Please try again.");
@@ -492,7 +487,28 @@ function Interview(props) {
                           </svg>
                         </div>
                         <h2 className="text-xl font-bold sm:text-2xl">Interview Completed!</h2>
-                        <p className="mt-2 text-sm text-slate-300">Your performance has been analyzed by our AI.</p>
+                    <p className="mt-2 text-sm text-slate-300">Your performance has been analyzed by our AI.</p>
+                    
+                    {backendResult && (
+                      <div className="mt-6 p-4 bg-white/10 rounded-xl backdrop-blur-md border border-white/20 max-w-sm">
+                        <div className="text-xs font-medium text-slate-400 uppercase tracking-wider">Final Assessment</div>
+                        <div className="mt-2 flex items-center justify-between gap-8">
+                          <div>
+                            <div className="text-3xl font-bold text-white">{backendResult.overall_score}%</div>
+                            <div className="text-[10px] text-slate-400">Overall Score</div>
+                          </div>
+                          <div className="text-right">
+                            <div className={`text-lg font-bold ${
+                              backendResult.recommendation === 'Strong Hire' ? 'text-emerald-400' : 
+                              backendResult.recommendation === 'Consider' ? 'text-yellow-400' : 'text-rose-400'
+                            }`}>
+                              {backendResult.recommendation}
+                            </div>
+                            <div className="text-[10px] text-slate-400">Recommendation</div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                       </>
                     ) : (
                       <>
