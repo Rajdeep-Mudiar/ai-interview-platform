@@ -6,13 +6,16 @@ import time
 import os
 import logging
 
+from datetime import datetime
+
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 class VoiceProctor:
-    def __init__(self, api_url="http://127.0.0.1:8000/alert", model_size="base"):
+    def __init__(self, api_url="http://127.0.0.1:8000/alert", model_size="base", user_id="unknown"):
         self.api_url = api_url
+        self.user_id = user_id
         logger.info(f"Loading Whisper model ({model_size})...")
         self.model = whisper.load_model(model_size)
         self.audio = pyaudio.PyAudio()
@@ -68,12 +71,16 @@ class VoiceProctor:
             pass
 
     def send_alert(self, detected_text):
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         try:
             requests.post(
                 self.api_url,
                 json={
+                    "user_id": self.user_id,
                     "type": "background_voice",
-                    "message": f"Possible assistance detected: '{detected_text}'"
+                    "message": f"Possible assistance detected: '{detected_text}'",
+                    "severity": 6,
+                    "timestamp": timestamp
                 },
                 timeout=2
             )

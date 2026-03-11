@@ -48,7 +48,26 @@ def create_report(data: ReportRequest):
             "suggestions": reasons
         })
         
-        # 3. Save to MongoDB Results collection
+        # 3. Fetch Proctoring Alerts for this user/session
+        proctoring_alerts = []
+        try:
+            from database.mongo import MongoDB
+            alerts_col = MongoDB.get_collection("proctoring_alerts")
+            # Get alerts for this user that happened today (or since start of interview)
+            proctoring_alerts = list(alerts_col.find({"user_id": str(data.user_id)}).sort("timestamp", 1))
+            # Format alerts for report
+            formatted_alerts = []
+            for a in proctoring_alerts:
+                formatted_alerts.append(f"[{a['timestamp']}] {a['type'].upper()} (Sev: {a['severity']}): {a['message']}")
+            
+            # Add to report data
+            report_data["proctoring_alerts"] = formatted_alerts
+            report_data["cheating_risk"] = c_risk
+        except Exception as e:
+            print(f"Error fetching alerts for report: {e}")
+            report_data["proctoring_alerts"] = []
+
+        # 4. Save to MongoDB Results collection
         try:
             # Generate PDF first to get filename
             filename = generate_report(report_data)
@@ -72,6 +91,7 @@ def create_report(data: ReportRequest):
                 "recommendation": scoring_result["recommendation"],
                 "suggestions": reasons,
                 "report_file": filename,
+                "proctoring_summary": formatted_alerts if proctoring_alerts else [],
                 "created_at": datetime.utcnow()
             }
             results_col.insert_one(result_doc_dict)
@@ -80,7 +100,7 @@ def create_report(data: ReportRequest):
             print(f"CRITICAL: Failed to save result to MongoDB: {mongo_err}")
             filename = generate_report(report_data) # Fallback if DB fails
         
-        # 4. Return results (text + download)
+        # 5. Return results (text + download)
         return {
             "overall_score": scoring_result["final_score"],
             "recommendation": scoring_result["recommendation"],

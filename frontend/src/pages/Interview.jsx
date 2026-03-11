@@ -41,9 +41,11 @@ function Interview(props) {
 
   // Control AI Proctoring Server
   const startAIProctoring = async () => {
+    const session = getUserSession();
+    const userId = session?.id || session?._id || "unknown";
     try {
-      await axios.post(`${AI_SERVICE_BASE}/start`);
-      console.log("AI Proctoring services started.");
+      await axios.post(`${AI_SERVICE_BASE}/start?user_id=${userId}`);
+      console.log(`AI Proctoring services started for user ${userId}.`);
     } catch (err) {
       console.warn("AI Proctoring server not reachable. Ensure 'python server.py' is running in ai-services folder.");
     }

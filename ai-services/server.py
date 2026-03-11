@@ -34,20 +34,20 @@ app.add_middleware(
 vision_process = None
 voice_process = None
 
-def run_voice_proctor():
+def run_voice_proctor(user_id):
     """Function to run the voice proctor in a separate process."""
     try:
-        logger.info("Initializing Voice Proctor...")
-        proctor = VoiceProctor()
+        logger.info(f"Initializing Voice Proctor for user {user_id}...")
+        proctor = VoiceProctor(user_id=user_id)
         proctor.run()
     except Exception as e:
         logger.error(f"Voice Proctor process failed: {e}")
 
-def run_visual_proctor():
+def run_visual_proctor(user_id):
     """Function to run the visual proctor in a separate process."""
     try:
-        logger.info("Initializing Visual Proctor (OpenCV/MediaPipe)...")
-        engine = ProctorEngine()
+        logger.info(f"Initializing Visual Proctor for user {user_id}...")
+        engine = ProctorEngine(user_id=user_id)
         engine.run()
     except Exception as e:
         logger.error(f"Visual Proctor failed: {e}")
@@ -60,26 +60,34 @@ def get_status():
     }
 
 @app.post("/start")
-def start_proctoring():
+def start_proctoring(user_id: str = "unknown"):
     global vision_process, voice_process
     
     if (vision_process and vision_process.is_alive()) or (voice_process and voice_process.is_alive()):
         return {"message": "Proctoring services are already running."}
     
-    logger.info("Starting CareBridge AI Proctoring Services...")
+    logger.info(f"Starting CareBridge AI Proctoring Services for user {user_id}...")
     
     # 1. Start Voice Proctor in background
-    voice_process = multiprocessing.Process(target=run_voice_proctor, name="VoiceProctorProcess")
+    voice_process = multiprocessing.Process(
+        target=run_voice_proctor, 
+        args=(user_id,),
+        name="VoiceProctorProcess"
+    )
     voice_process.daemon = True
     voice_process.start()
     
-    # 2. Start Visual Proctor in background (it will open its own window)
-    vision_process = multiprocessing.Process(target=run_visual_proctor, name="VisualProctorProcess")
+    # 2. Start Visual Proctor in background
+    vision_process = multiprocessing.Process(
+        target=run_visual_proctor, 
+        args=(user_id,),
+        name="VisualProctorProcess"
+    )
     vision_process.daemon = True
     vision_process.start()
     
     logger.info("✅ All AI Proctoring services launched.")
-    return {"message": "AI Proctoring services started successfully."}
+    return {"message": f"AI Proctoring services started for user {user_id}."}
 
 @app.post("/stop")
 def stop_proctoring():

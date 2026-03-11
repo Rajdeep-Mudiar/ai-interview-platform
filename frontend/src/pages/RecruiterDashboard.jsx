@@ -148,12 +148,29 @@ function RecruiterDashboard() {
               Suspicious activity detected during interviews.
             </div>
           </CardHeader>
-          <CardBody className="grid gap-3">
+          <CardBody className="grid gap-3 max-h-[500px] overflow-y-auto">
             {alerts.length > 0 ? (
               alerts.map((alert, idx) => (
-                <div key={idx} className="rounded-xl bg-rose-50 p-4 ring-1 ring-rose-200">
-                  <div className="text-sm font-semibold text-rose-900">{alert.type}</div>
-                  <div className="text-xs text-rose-700">{alert.message}</div>
+                <div key={idx} className={`rounded-xl p-4 ring-1 transition-all shadow-sm ${
+                  alert.severity >= 8 ? 'bg-rose-50 ring-rose-200 border-l-4 border-l-rose-600' :
+                  alert.severity >= 5 ? 'bg-amber-50 ring-amber-200 border-l-4 border-l-amber-500' :
+                  'bg-blue-50 ring-blue-100 border-l-4 border-l-blue-400'
+                }`}>
+                  <div className="flex justify-between items-start mb-1">
+                    <div className="text-sm font-bold text-slate-900 uppercase tracking-tight">{alert.type.replace('_', ' ')}</div>
+                    <div className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                      alert.severity >= 8 ? 'bg-rose-600 text-white' :
+                      alert.severity >= 5 ? 'bg-amber-500 text-white' :
+                      'bg-blue-500 text-white'
+                    }`}>
+                      SEV {alert.severity}
+                    </div>
+                  </div>
+                  <div className="text-xs text-slate-600 mb-2 leading-snug">{alert.message}</div>
+                  <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-200/50">
+                    <div className="text-[10px] font-medium text-slate-400">{alert.timestamp}</div>
+                    <div className="text-[10px] font-bold text-slate-500">User: {alert.user_id?.substring(0,8) || "N/A"}</div>
+                  </div>
                 </div>
               ))
             ) : (

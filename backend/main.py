@@ -47,16 +47,39 @@ app.include_router(leaderboard_router)
 
 alerts = []
 
+from database.mongo import get_results_col
+from datetime import datetime
+
+# ... existing code ...
+
 @app.post("/alert")
 def receive_alert(data: dict):
-
+    # Add timestamp if not provided by AI services
+    if "timestamp" not in data:
+        data["timestamp"] = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+    
+    # Store in memory for live dashboard
     alerts.append(data)
+    
+    # Also persist to MongoDB for the final report
+    user_id = data.get("user_id", "unknown")
+    if user_id != "unknown":
+        try:
+            results_col = get_results_col()
+            # We use an upsert-like logic or just append to an 'alerts' field in the latest result
+            # However, since the interview might not be finished, we can store alerts in a separate collection
+            from database.mongo import MongoDB
+            alerts_col = MongoDB.get_collection("proctoring_alerts")
+            alerts_col.insert_one(data)
+        except Exception as e:
+            print(f"Error persisting alert: {e}")
 
     return {"status":"received"}
 
 @app.get("/alerts")
-def get_alerts():
-
+def get_alerts(user_id: str = None):
+    if user_id:
+        return [a for a in alerts if a.get("user_id") == user_id]
     return alerts
 
 @app.post("/upload_resume")
