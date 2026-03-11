@@ -3,7 +3,7 @@ import axios from "axios";
 import jsPDF from "jspdf";
 import Button from "../components/ui/Button";
 import { Card, CardBody, CardHeader } from "../components/ui/Card";
-import { getUserSession } from "../utils/auth";
+import { clearUserSession, getUserSession } from "../utils/auth";
 import Leaderboard from "../components/Leaderboard";
 
 function Dashboard() {
@@ -83,6 +83,11 @@ function Dashboard() {
     }
   };
 
+  const handleLogout = () => {
+    clearUserSession();
+    window.location.href = "/login";
+  };
+
   return (
     <div className="cb-container py-10 sm:py-14">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -94,6 +99,14 @@ function Dashboard() {
             Generate a final score, download a PDF, and request an explanation.
           </p>
         </div>
+        <Button
+          onClick={handleLogout}
+          variant="secondary"
+          size="sm"
+          className="self-start sm:self-auto"
+        >
+          Logout
+        </Button>
       </div>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

@@ -13,8 +13,8 @@ export default function VideoLanding() {
           Welcome to CareBridge
         </h1>
         <p className="mt-3 text-pretty text-base text-slate-600 sm:text-lg">
-          Run the AI interview flow or jump into the recruiter dashboard. The
-          video below will play automatically.
+          Run the AI interview pipeline, start a live camera interview, or jump
+          into the recruiter dashboard. The video below will play automatically.
         </p>
       </div>
 
@@ -39,7 +39,15 @@ export default function VideoLanding() {
 
           <div className="absolute bottom-5 left-5 flex flex-col gap-3 sm:flex-row">
             <Button as="a" href="/interview-flow" size="lg">
-              Start interview
+              AI interview pipeline
+            </Button>
+            <Button
+              as="a"
+              href="/interview"
+              variant="secondary"
+              size="lg"
+            >
+              Live camera interview
             </Button>
             {isRecruiter && (
               <Button

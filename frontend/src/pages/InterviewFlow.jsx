@@ -6,6 +6,8 @@ import Button from "../components/ui/Button";
 import { Card, CardBody, CardHeader } from "../components/ui/Card";
 import { Label, Textarea } from "../components/ui/Form";
 
+const API_BASE = "http://localhost:8000";
+
 function InterviewFlow() {
   const location = useLocation();
   const [resume, setResume] = useState("");
@@ -21,15 +23,23 @@ function InterviewFlow() {
   const [questions, setQuestions] = useState([]);
   const [suggestions, setSuggestions] = useState([]);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
 
   const analyzeResume = async () => {
     setBusy(true);
+    setError("");
     try {
-      const res = await axios.post("http://localhost:8000/match_jd", {
+      const res = await axios.post(`${API_BASE}/match_jd`, {
         resume: resume,
         jd: jd,
       });
       setMatch(res.data);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("Match analysis failed:", err);
+      setError(
+        "Unable to analyze resume and job description. Please try again.",
+      );
     } finally {
       setBusy(false);
     }
@@ -38,16 +48,36 @@ function InterviewFlow() {
   const generateQuestions = async () => {
     if (!match) return;
     setBusy(true);
+    setError("");
     try {
-      const res = await axios.post(
-        "http://localhost:8000/generate_ai_questions",
-        {
-          resume: resume,
-          jd: jd,
-          missing_skills: match.missing_skills,
-        },
-      );
-      setQuestions(res.data.questions);
+      // Primary: use AI-powered question generator.
+      const res = await axios.post(`${API_BASE}/generate_ai_questions`, {
+        resume: resume,
+        jd: jd,
+        missing_skills: match.missing_skills,
+      });
+      setQuestions(res.data.questions || []);
+    } catch (err) {
+      // If AI questions fail (e.g. missing model), fall back to simpler generator.
+      // eslint-disable-next-line no-console
+      console.error("AI question generation failed, falling back:", err);
+      try {
+        const fallback = await axios.post(
+          `${API_BASE}/generate-questions`,
+          {
+            skills: match.missing_skills?.length
+              ? match.missing_skills
+              : match.matched_skills || [],
+          },
+        );
+        setQuestions(fallback.data.questions || []);
+      } catch (fallbackErr) {
+        // eslint-disable-next-line no-console
+        console.error("Fallback question generation failed:", fallbackErr);
+        setError(
+          "Unable to generate interview questions right now. Please try again.",
+        );
+      }
     } finally {
       setBusy(false);
     }
@@ -56,12 +86,19 @@ function InterviewFlow() {
   const getSuggestions = async () => {
     if (!match) return;
     setBusy(true);
+    setError("");
     try {
-      const res = await axios.post("http://localhost:8000/resume_suggestions", {
+      const res = await axios.post(`${API_BASE}/resume_suggestions`, {
         missing_skills: match.missing_skills,
         resume: resume,
       });
-      setSuggestions(res.data.suggestions);
+      setSuggestions(res.data.suggestions || []);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("Resume suggestion generation failed:", err);
+      setError(
+        "Unable to generate resume suggestions right now. Please try again.",
+      );
     } finally {
       setBusy(false);
     }
@@ -108,6 +145,11 @@ function InterviewFlow() {
             improvements.
           </p>
         </div>
+        {error && (
+          <div className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700 ring-1 ring-rose-200">
+            {error}
+          </div>
+        )}
       </div>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-12">

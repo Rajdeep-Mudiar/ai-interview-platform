@@ -3,15 +3,13 @@ import Button from "../components/ui/Button";
 import { Card, CardBody, CardHeader } from "../components/ui/Card";
 import { HelperText, Input, Label } from "../components/ui/Form";
 import { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { saveUserSession } from "../utils/auth";
 
 const API_BASE = "http://localhost:8000";
 
 function Login() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const from = location.state?.from?.pathname || "/";
 
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
@@ -50,12 +48,9 @@ function Login() {
       const user = res.data; // { id, name, role }
       saveUserSession(user);
 
-      // If there was a redirect source, go there.
-      // Otherwise, go to default dashboard based on role.
-      if (location.state?.from) {
-        navigate(from, { replace: true });
-      } else if (user.role === "recruiter") {
-        navigate("/recruiter-dashboard", { replace: true });
+      if (user.role === "recruiter") {
+        // Explicitly send recruiters to the recruiter dashboard URL
+        window.location.href = "http://localhost:5173/recruiter-dashboard";
       } else {
         navigate("/dashboard", { replace: true });
       }

@@ -11,6 +11,7 @@ from analytics.explain import generate_explanation
 from database.store import save_candidate
 from analytics.resume_advisor import resume_suggestions
 from ai_interviewer.ollama_questions import generate_ai_questions
+from ai_interviewer.ollama_resume_suggestions import generate_ai_resume_suggestions
 from analytics.emotion import analyze_emotions
 from leaderboard import router as leaderboard_router
 from pipeline_db import db, Interview
@@ -139,10 +140,18 @@ def save(data: dict):
 
 def suggest(data:dict):
 
-    suggestions = resume_suggestions(
-        data["missing_skills"],
-        data["resume"]
-    )
+    # First, try to generate suggestions using the Ollama-powered model.
+    # If that fails or returns nothing, fall back to the simple rule-based advisor.
+    resume_text = data["resume"]
+    missing_skills = data["missing_skills"]
+
+    suggestions = generate_ai_resume_suggestions(resume_text, missing_skills)
+
+    if not suggestions:
+        suggestions = resume_suggestions(
+            missing_skills,
+            resume_text
+        )
 
     return {"suggestions": suggestions}
 
