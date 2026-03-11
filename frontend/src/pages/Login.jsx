@@ -60,15 +60,34 @@ export default function Login() {
       saveUserSession(user);
       console.log("Session saved successfully:", user);
       
+      // Clear inputs
+      setEmail("");
+      setName("");
+      setPassword("");
+      setCompany("");
+      setError("");
+      
       // Trigger a storage event for Navbar to update if needed
       window.dispatchEvent(new Event("storage"));
 
-      if (location.state?.from) {
-        navigate(from, { replace: true });
-      } else if (user.role === "recruiter") {
-        navigate("/recruiter-dashboard", { replace: true });
+      // Show success message briefly before redirecting if signing up
+      if (isSignUp) {
+        setError("Account created successfully! Redirecting...");
+        setTimeout(() => {
+          if (user.role === "recruiter") {
+            navigate("/recruiter-dashboard", { replace: true });
+          } else {
+            navigate("/dashboard", { replace: true });
+          }
+        }, 1500);
       } else {
-        navigate("/dashboard", { replace: true });
+        if (location.state?.from) {
+          navigate(from, { replace: true });
+        } else if (user.role === "recruiter") {
+          navigate("/recruiter-dashboard", { replace: true });
+        } else {
+          navigate("/dashboard", { replace: true });
+        }
       }
     } catch (err) {
       console.error("Authentication error detailed:", err);
@@ -198,10 +217,12 @@ export default function Login() {
               )}
 
               {error && (
-                <div className="rounded-md bg-red-50 p-3">
+                <div className={`rounded-md p-3 ${error.includes("successfully") ? "bg-emerald-50" : "bg-red-50"}`}>
                   <div className="flex">
                     <div className="ml-3">
-                      <p className="text-sm font-medium text-red-800">{error}</p>
+                      <p className={`text-sm font-medium ${error.includes("successfully") ? "text-emerald-800" : "text-red-800"}`}>
+                        {error}
+                      </p>
                     </div>
                   </div>
                 </div>
