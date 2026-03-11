@@ -4,7 +4,7 @@ This folder contains the Python-based AI proctoring services used for real-time 
 
 ## 🚀 Quick Start (Unified Entry Point)
 
-The simplest way to run all proctoring services simultaneously is using the `server.py` script. This will launch both the Visual and Voice proctoring engines in parallel.
+The simplest way to run all proctoring services is using the `server.py` script. This launches a **FastAPI controller** on port **8001** that waits for a signal from the frontend to start the actual camera and voice monitoring.
 
 ```bash
 # Install dependencies first
@@ -13,6 +13,8 @@ pip install -r requirements.txt
 # Run the unified proctoring server
 python server.py
 ```
+
+*The camera and microphone will only activate once the candidate clicks "Start Proctored Interview" in the browser.*
 
 ---
 

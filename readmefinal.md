@@ -33,7 +33,8 @@ CareBridge is a professional, AI-powered recruitment platform designed to automa
   - **Professional PDF Reports**: Generate and download comprehensive candidate performance reports.
 
 - **AI Proctoring Architecture**
-  - **server.py**: Unified entry point to run all AI services (visual and audio).
+  - **server.py**: FastAPI controller running on port 8001 that manages AI services.
+  - **On-Demand Activation**: Camera and Voice services only start when the candidate explicitly begins the interview.
   - **Proctor Engine**: Advanced vision system using MediaPipe and YOLOv8.
   - **Voice Proctor**: Continuous background monitoring using OpenAI's Whisper model.
   - **Backend Integration**: Real-time alert polling from AI services into the candidate's interview session.

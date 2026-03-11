@@ -6,3 +6,5 @@ openai-whisper
 pyaudio
 wave
 numpy
+fastapi
+uvicorn

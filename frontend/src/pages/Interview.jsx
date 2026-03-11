@@ -32,8 +32,29 @@ function Interview(props) {
   const [isRecording, setIsRecording] = useState(false);
   const [recognition, setRecognition] = useState(null);
   const [backendResult, setBackendResult] = useState(null);
+  const [isInterviewStarted, setIsInterviewStarted] = useState(false);
 
   const API_BASE = "http://127.0.0.1:8000";
+  const AI_SERVICE_BASE = "http://127.0.0.1:8001";
+
+  // Control AI Proctoring Server
+  const startAIProctoring = async () => {
+    try {
+      await axios.post(`${AI_SERVICE_BASE}/start`);
+      console.log("AI Proctoring services started.");
+    } catch (err) {
+      console.warn("AI Proctoring server not reachable. Ensure 'python server.py' is running in ai-services folder.");
+    }
+  };
+
+  const stopAIProctoring = async () => {
+    try {
+      await axios.post(`${AI_SERVICE_BASE}/stop`);
+      console.log("AI Proctoring services stopped.");
+    } catch (err) {
+      console.error("Failed to stop AI Proctoring services:", err);
+    }
+  };
 
   // Polling for backend alerts from AI services
   useEffect(() => {
@@ -227,12 +248,17 @@ function Interview(props) {
     window.speechSynthesis.speak(speech);
   }
 
+  const startInterview = async () => {
+    setIsInterviewStarted(true);
+    await startAIProctoring();
+  };
+
   // Speak question when it loads
   useEffect(() => {
-    if (questions.length > 0 && questions[current]) {
+    if (isInterviewStarted && questions.length > 0 && questions[current]) {
       speak(questions[current]);
     }
-  }, [questions, current]);
+  }, [questions, current, isInterviewStarted]);
 
   const sendGazeAlert = async () => {
     try {
@@ -244,11 +270,6 @@ function Interview(props) {
     } catch (error) {
       console.error("Failed to send alert:", error);
     }
-  };
-
-  // Example: call with static skills for demo
-  const generate = () => {
-    loadQuestions(["python", "react", "sql"]);
   };
 
   // Expose loadQuestions for parent/other pages
@@ -351,7 +372,9 @@ function Interview(props) {
     } else {
       // Interview finished
       setProgress(100);
+      setIsInterviewStarted(false);
       setInterviewFinished(true);
+      await stopAIProctoring();
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
       }
@@ -407,11 +430,6 @@ function Interview(props) {
                 </p>
               </div>
             </div>
-            {questions.length === 0 && (
-              <Button onClick={generate} variant="secondary">
-                Start interview
-              </Button>
-            )}
           </div>
 
           <Card>
@@ -477,6 +495,20 @@ function Interview(props) {
                   muted
                   className="h-full w-full object-cover"
                 />
+                {!isInterviewStarted && !interviewFinished && (
+                  <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-slate-900/60 p-6 text-center text-white backdrop-blur-sm">
+                    <div className="mb-4 rounded-full bg-white/10 p-4 ring-1 ring-white/30">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <h2 className="text-xl font-bold">Ready to start?</h2>
+                    <p className="mt-2 text-sm text-slate-200">The AI proctoring services will activate once you click start.</p>
+                    <Button onClick={startInterview} className="mt-6 bg-white text-slate-900 hover:bg-slate-100">
+                      Start Proctored Interview
+                    </Button>
+                  </div>
+                )}
                 {interviewFinished && (
                   <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-slate-900/90 p-6 text-center text-white backdrop-blur-sm">
                     {integrity > 0 ? (
