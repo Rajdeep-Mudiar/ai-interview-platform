@@ -1,13 +1,22 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
 import jsPDF from "jspdf";
 import Button from "../components/ui/Button";
 import { Card, CardBody, CardHeader } from "../components/ui/Card";
+import { getUserSession } from "../utils/auth";
 
 function Dashboard() {
   const [result, setResult] = useState(null);
   const [explanation, setExplanation] = useState([]);
   const [busy, setBusy] = useState(false);
+  const session = getUserSession();
+  const displayName = session?.name || "Candidate";
+
+  useEffect(() => {
+    if (!session) {
+      window.location.href = "/login";
+    }
+  }, [session]);
 
   const generateReport = async () => {
     setBusy(true);
@@ -58,7 +67,7 @@ function Dashboard() {
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
-            Candidate evaluation
+            {displayName}'s dashboard
           </h1>
           <p className="mt-1 text-sm text-slate-600">
             Generate a final score, download a PDF, and request an explanation.

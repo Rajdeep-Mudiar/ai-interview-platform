@@ -2,13 +2,14 @@ import { useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 import Button from "./ui/Button";
 import { cn } from "./ui/cn";
+import { getUserSession } from "../utils/auth";
 
-const navItems = [
+const baseNavItems = [
   { to: "/", label: "Home" },
+  { to: "/jobs", label: "Jobs" },
   { to: "/resume-analysis", label: "Resume Analysis" },
   { to: "/interview-flow", label: "Interview Pipeline" },
   { to: "/dashboard", label: "Candidate Dashboard" },
-  { to: "/recruiter-dashboard", label: "Recruiter" },
 ];
 
 function NavItem({ to, children, onClick }) {
@@ -30,6 +31,12 @@ function NavItem({ to, children, onClick }) {
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
+  const session = getUserSession();
+  const isRecruiter = session?.role === "recruiter";
+
+  const navItems = isRecruiter
+    ? [...baseNavItems, { to: "/recruiter-dashboard", label: "Recruiter" }]
+    : baseNavItems;
 
   return (
     <header className="cb-navbar">

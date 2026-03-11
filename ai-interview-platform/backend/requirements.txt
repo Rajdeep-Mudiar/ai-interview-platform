@@ -6,3 +6,7 @@ pdfplumber
 sentence-transformers
 reportlab
 pydantic
+pymongo
+python-dotenv
+bcrypt
+

@@ -3,26 +3,40 @@ import Button from "../components/ui/Button";
 import { Card, CardBody, CardHeader } from "../components/ui/Card";
 import { HelperText, Input, Label } from "../components/ui/Form";
 import { useState } from "react";
+import { saveUserSession } from "../utils/auth";
 
-const uploadResume = async (file) => {
-  const formData = new FormData();
-
-  formData.append("file", file);
-
-  const res = await axios.post("http://localhost:8000/upload_resume", formData);
-
-  console.log(res.data);
-};
+const API_BASE = "http://localhost:8000";
 
 function Login() {
-  const [file, setFile] = useState(null);
+  const [name, setName] = useState("");
+  const [password, setPassword] = useState("");
+  const [role, setRole] = useState("candidate");
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
 
-  async function onUpload() {
-    if (!file) return;
+  async function onSubmit(e) {
+    e.preventDefault();
+    if (!name || !password) {
+      setError("Please enter a name and password.");
+      return;
+    }
+    setError("");
     setBusy(true);
     try {
-      await uploadResume(file);
+      const res = await axios.post(`${API_BASE}/auth/signin`, {
+        name,
+        password,
+        role,
+      });
+
+      const user = res.data; // { id, name, role }
+      saveUserSession(user);
+
+      if (user.role === "recruiter") {
+        window.location.href = "/recruiter-dashboard";
+      } else {
+        window.location.href = "/dashboard";
+      }
     } finally {
       setBusy(false);
     }
@@ -33,48 +47,72 @@ function Login() {
       <div className="mx-auto grid max-w-xl gap-6">
         <div className="space-y-2 text-center">
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
-            Upload a resume
+            Sign in
           </h1>
           <p className="text-sm text-slate-600">
-            Start by uploading a resume PDF. We’ll parse it and prepare it for
-            matching and interview generation.
+            Enter your name and password, then choose whether you are a candidate
+            or a recruiter.
           </p>
         </div>
 
         <Card>
           <CardHeader className="pb-4">
-            <div className="text-sm font-semibold text-slate-900">Resume file</div>
-            <div className="text-sm text-slate-600">
-              Accepted formats depend on backend parsing.
+            <div className="text-sm font-semibold text-slate-900">
+              Account details
             </div>
           </CardHeader>
-          <CardBody className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="resume">Choose file</Label>
-              <Input
-                id="resume"
-                type="file"
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              />
-              <HelperText>
-                Tip: Use a clean, text-based PDF for best results.
-              </HelperText>
-            </div>
-
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="text-sm text-slate-600">
-                {file ? (
-                  <>
-                    Selected: <span className="font-medium text-slate-900">{file.name}</span>
-                  </>
-                ) : (
-                  "No file selected."
-                )}
+          <CardBody>
+            <form className="space-y-4" onSubmit={onSubmit}>
+              <div className="space-y-2">
+                <Label htmlFor="name">Name</Label>
+                <Input
+                  id="name"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Enter your name"
+                />
               </div>
-              <Button onClick={onUpload} disabled={!file || busy}>
-                {busy ? "Uploading..." : "Upload"}
+
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="role">Role</Label>
+                <select
+                  id="role"
+                  className="cb-input"
+                  value={role}
+                  onChange={(e) => setRole(e.target.value)}
+                >
+                  <option value="candidate">Candidate</option>
+                  <option value="recruiter">Recruiter</option>
+                </select>
+              </div>
+
+              {error && (
+                <p className="text-sm text-rose-600">
+                  {error}
+                </p>
+              )}
+
+              <Button type="submit" disabled={busy}>
+                {busy ? "Signing in..." : "Continue"}
               </Button>
-            </div>
+
+              <HelperText>
+                This is a simple sign-in UI. We can later connect it to MongoDB
+                and show role-based dashboards.
+              </HelperText>
+            </form>
           </CardBody>
         </Card>
       </div>

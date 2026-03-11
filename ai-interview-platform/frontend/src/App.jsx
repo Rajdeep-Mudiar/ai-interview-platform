@@ -14,6 +14,7 @@ import InterviewFlow from "./pages/InterviewFlow";
 
 import ResumeAnalysis from "./pages/ResumeAnalysis";
 import VideoLanding from "./pages/VideoLanding";
+import Jobs from "./pages/Jobs";
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
           <Route path="/interview-flow" element={<InterviewFlow />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/recruiter-dashboard" element={<RecruiterDashboard />} />
+          <Route path="/jobs" element={<Jobs />} />
           <Route path="/report" element={<Report />} />
           <Route path="/voice-interview" element={<VoiceInterview />} />
           <Route path="/resume-analysis" element={<ResumeAnalysis />} />

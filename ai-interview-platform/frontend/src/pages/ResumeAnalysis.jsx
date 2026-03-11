@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Interview } from "./Interview";
 import Button from "../components/ui/Button";
 import { Card, CardBody, CardHeader } from "../components/ui/Card";
@@ -10,6 +10,24 @@ export default function ResumeAnalysis() {
   const [result, setResult] = useState(null);
   const loadQuestionsRef = useRef(null);
   const [busy, setBusy] = useState(false);
+
+  // If navigated from Jobs page with ?jobId=..., fetch job and prefill JD.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const jobId = params.get("jobId");
+    if (!jobId) return;
+    async function loadJob() {
+      try {
+        const res = await fetch(`http://localhost:8000/jobs/${jobId}`);
+        if (!res.ok) return;
+        const job = await res.json();
+        setJd(job.description || "");
+      } catch {
+        // ignore
+      }
+    }
+    loadJob();
+  }, []);
 
   async function analyze() {
     if (!file || !jd.trim()) return;
