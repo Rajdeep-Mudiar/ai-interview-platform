@@ -123,13 +123,8 @@ def calculate_match_score(resume_text: str, job_description: str) -> Dict[str, A
         "skill_match_rate": round(skill_similarity * 100, 2)
     }
 
-def analyze_resume(file_stream, job_description: str) -> Dict[str, Any]:
-    """Enhanced resume analysis pipeline with contact info and categorization."""
-    resume_text = extract_text_from_pdf(file_stream)
-    if not resume_text:
-        return {"error": "Could not extract text from PDF. Ensure it's not scanned or corrupted."}
-        
-    contact_info = extract_contact_info(resume_text)
+def calculate_match_details(resume_text: str, job_description: str) -> Dict[str, Any]:
+    """Calculates detailed match metrics including skills gap analysis."""
     scores = calculate_match_score(resume_text, job_description)
     
     resume_skills_cat = extract_skills_with_context(resume_text)
@@ -142,10 +137,28 @@ def analyze_resume(file_stream, job_description: str) -> Dict[str, Any]:
     missing_skills = list(jd_skills_flat - resume_skills_flat)
     matched_skills = list(jd_skills_flat & resume_skills_flat)
     
+    return {
+        "scores": scores,
+        "resume_skills": resume_skills_cat,
+        "matched_skills": matched_skills,
+        "missing_skills": missing_skills
+    }
+
+def analyze_resume(file_stream, job_description: str) -> Dict[str, Any]:
+    """Enhanced resume analysis pipeline with contact info and categorization."""
+    resume_text = extract_text_from_pdf(file_stream)
+    if not resume_text:
+        return {"error": "Could not extract text from PDF. Ensure it's not scanned or corrupted."}
+        
+    contact_info = extract_contact_info(resume_text)
+    match_details = calculate_match_details(resume_text, job_description)
+    
+    scores = match_details["scores"]
+    
     # Smart Suggestions
     suggestions = []
-    if missing_skills:
-        suggestions.append(f"Adding these skills could improve your match: {', '.join(missing_skills[:5])}")
+    if match_details["missing_skills"]:
+        suggestions.append(f"Adding these skills could improve your match: {', '.join(match_details['missing_skills'][:5])}")
     if scores["overall_score"] < 40:
         suggestions.append("Your resume content has low relevance. Tailor your experience to match the job requirements.")
     elif scores["overall_score"] > 80:
@@ -155,9 +168,9 @@ def analyze_resume(file_stream, job_description: str) -> Dict[str, Any]:
         "score": scores["overall_score"],
         "metrics": scores,
         "contact": contact_info,
-        "resume_skills": resume_skills_cat,
-        "matched_skills": matched_skills,
-        "missing_skills": missing_skills,
+        "resume_skills": match_details["resume_skills"],
+        "matched_skills": match_details["matched_skills"],
+        "missing_skills": match_details["missing_skills"],
         "suggestions": suggestions,
         "resume_text": resume_text[:1500] + "..." # Truncated text preview
     }

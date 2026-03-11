@@ -12,6 +12,7 @@ export default function ResumeAnalysis() {
   const [jobQuestions, setJobQuestions] = useState([]);
   const [jobId, setJobId] = useState(null);
   const [result, setResult] = useState(null);
+  const [matches, setMatches] = useState([]);
   const [busy, setBusy] = useState(false);
 
   // If navigated from Jobs page with ?jobId=..., fetch job and prefill JD.
@@ -36,22 +37,31 @@ export default function ResumeAnalysis() {
   }, []);
 
   async function analyze() {
-    if (!file || !jd.trim()) return;
+    if (!file) return;
+    
     setBusy(true);
     const API_BASE = "http://127.0.0.1:8000";
+    
     try {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("job_description", jd);
-      const res = await axios.post(`${API_BASE}/analyze-resume`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
-      setResult(res.data);
       
-      // Instead of navigating immediately, we show results here.
-      // If the user wants to start an interview, they can click a button below.
+      if (jd.trim()) {
+        // Specific JD analysis
+        formData.append("job_description", jd);
+        const res = await axios.post(`${API_BASE}/analyze-resume`, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+        setResult(res.data);
+        setMatches([]);
+      } else {
+        // Match against all jobs
+        const res = await axios.post(`${API_BASE}/match-jobs`, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+        setMatches(res.data.matches || []);
+        setResult(null);
+      }
     } catch (err) {
       console.error("Analysis failed:", err);
     } finally {
@@ -91,10 +101,10 @@ export default function ResumeAnalysis() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="jd">Job description</Label>
+                <Label htmlFor="jd">Job description (Optional)</Label>
                 <Textarea
                   id="jd"
-                  placeholder="Paste job description…"
+                  placeholder="Paste JD or leave empty to match all jobs…"
                   value={jd}
                   onChange={(e) => setJd(e.target.value)}
                   className="min-h-28"
@@ -113,8 +123,8 @@ export default function ResumeAnalysis() {
                   "No resume file selected."
                 )}
               </div>
-              <Button onClick={analyze} disabled={!file || !jd.trim() || busy}>
-                {busy ? "Analyzing..." : "Analyze"}
+              <Button onClick={analyze} disabled={!file || busy}>
+                {busy ? "Analyzing..." : (jd.trim() ? "Analyze Specific Job" : "Find Matching Jobs")}
               </Button>
             </div>
           </CardBody>
@@ -128,7 +138,49 @@ export default function ResumeAnalysis() {
             </div>
           </CardHeader>
           <CardBody>
-            {result ? (
+            {matches.length > 0 ? (
+              <div className="grid gap-4">
+                <div className="text-sm font-semibold text-slate-900 mb-2">Matching Jobs Found ({matches.length})</div>
+                {matches.map((match) => (
+                  <div key={match.job_id} className="rounded-xl bg-white p-4 ring-1 ring-slate-200 hover:ring-blue-300 transition-all shadow-sm">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-900">{match.title}</h3>
+                        <p className="text-[11px] text-slate-500">{match.company}</p>
+                      </div>
+                      <div className="flex flex-col items-end">
+                        <span className={`text-sm font-bold ${match.score > 70 ? 'text-emerald-600' : match.score > 40 ? 'text-amber-600' : 'text-slate-600'}`}>
+                          {match.score}% Match
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <p className="text-xs text-slate-600 line-clamp-2 mb-3">
+                      {match.description_preview}
+                    </p>
+                    
+                    <Button 
+                       size="sm"
+                       className="w-full text-xs py-1.5"
+                       onClick={() => {
+                         navigate("/interview", { 
+                           state: { 
+                             skills: match.matched_skills || [],
+                             missing_skills: match.missing_skills || [],
+                             jobQuestions: match.questions || [],
+                             resume_score: match.score,
+                             jobTitle: match.title,
+                             job_id: match.job_id
+                           } 
+                         });
+                       }}
+                     >
+                       Start Interview
+                     </Button>
+                  </div>
+                ))}
+              </div>
+            ) : result ? (
               <div className="grid gap-4">
                 <div className="rounded-xl bg-slate-50 p-4 ring-1 ring-slate-200">
                   <div className="flex justify-between items-center">
