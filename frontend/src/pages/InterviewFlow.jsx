@@ -8,8 +8,12 @@ import { Label, Textarea } from "../components/ui/Form";
 
 function InterviewFlow() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const [file, setFile] = useState(null);
+  const [files, setFiles] = useState([]);
   const [resume, setResume] = useState("");
   const [jd, setJd] = useState("");
+  const [matches, setMatches] = useState([]);
 
   useEffect(() => {
     if (location.state) {
@@ -23,13 +27,39 @@ function InterviewFlow() {
   const [busy, setBusy] = useState(false);
 
   const analyzeResume = async () => {
+    const targetFile = file || files[0];
+    const API_BASE = "http://127.0.0.1:8000";
     setBusy(true);
+
     try {
-      const res = await axios.post("http://localhost:8000/match_jd", {
-        resume: resume,
-        jd: jd,
-      });
-      setMatch(res.data);
+      if (targetFile) {
+        // Use resume parser
+        const formData = new FormData();
+        formData.append("file", targetFile);
+        
+        if (jd.trim()) {
+          const res = await axios.post(`${API_BASE}/analyze-resume`, formData, {
+            headers: { "Content-Type": "multipart/form-data" },
+          });
+          setMatch(res.data);
+          setMatches([]);
+        } else {
+          const res = await axios.post(`${API_BASE}/match-jobs`, formData, {
+            headers: { "Content-Type": "multipart/form-data" },
+          });
+          setMatches(res.data.matches || []);
+          setMatch(null);
+        }
+      } else if (resume.trim() && jd.trim()) {
+        // Legacy text analysis
+        const res = await axios.post(`${API_BASE}/match_jd`, {
+          resume: resume,
+          jd: jd,
+        });
+        setMatch(res.data);
+      }
+    } catch (err) {
+      console.error("Analysis failed:", err);
     } finally {
       setBusy(false);
     }
@@ -121,18 +151,72 @@ function InterviewFlow() {
           <CardBody className="grid gap-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Resume</Label>
-                <Textarea
-                  placeholder="Paste resume text…"
-                  value={resume}
-                  onChange={(e) => setResume(e.target.value)}
-                  className="min-h-44"
-                />
+                <Label>Resume upload</Label>
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      id="resumeFile"
+                      type="file"
+                      className="hidden"
+                      onChange={(e) => {
+                        const selected = e.target.files?.[0];
+                        if (selected) {
+                          setFile(selected);
+                          setFiles([]);
+                        }
+                      }}
+                    />
+                    <Button 
+                      variant="secondary" 
+                      size="sm"
+                      onClick={() => document.getElementById('resumeFile').click()}
+                    >
+                      Choose File
+                    </Button>
+                    <input
+                      id="resumeFolder"
+                      type="file"
+                      webkitdirectory="true"
+                      directory="true"
+                      className="hidden"
+                      onChange={(e) => {
+                        const selectedFiles = Array.from(e.target.files || []).filter(f => f.name.endsWith('.pdf'));
+                        if (selectedFiles.length > 0) {
+                          setFiles(selectedFiles);
+                          setFile(null);
+                        }
+                      }}
+                    />
+                    <Button 
+                      variant="secondary" 
+                      size="sm"
+                      onClick={() => document.getElementById('resumeFolder').click()}
+                    >
+                      Upload Folder
+                    </Button>
+                  </div>
+                  <div className="text-[11px] text-slate-500">
+                    {file ? `File: ${file.name}` : files.length > 0 ? `${files.length} PDF(s) found in folder` : "No files selected"}
+                  </div>
+                </div>
+                <div className="pt-2">
+                  <Label>Or Paste Resume</Label>
+                  <Textarea
+                    placeholder="Paste resume text…"
+                    value={resume}
+                    onChange={(e) => {
+                      setResume(e.target.value);
+                      setFile(null);
+                      setFiles([]);
+                    }}
+                    className="min-h-24"
+                  />
+                </div>
               </div>
               <div className="space-y-2">
-                <Label>Job description</Label>
+                <Label>Job description (Optional)</Label>
                 <Textarea
-                  placeholder="Paste job description…"
+                  placeholder="Paste job description or leave empty to match all jobs…"
                   value={jd}
                   onChange={(e) => setJd(e.target.value)}
                   className="min-h-44"
@@ -143,7 +227,7 @@ function InterviewFlow() {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <Button
                 onClick={analyzeResume}
-                disabled={!resume.trim() || !jd.trim() || busy}
+                disabled={(!resume.trim() && !file && !files.length) || busy}
               >
                 {busy ? "Analyzing..." : "Analyze resume"}
               </Button>
@@ -179,7 +263,43 @@ function InterviewFlow() {
               <div className="text-sm text-slate-600">Fit score and gaps.</div>
             </CardHeader>
             <CardBody>
-              {match ? (
+              {matches.length > 0 ? (
+                <div className="grid gap-3 max-h-[500px] overflow-y-auto pr-1">
+                  <div className="text-xs font-semibold text-slate-900 mb-1">Matching Jobs Found ({matches.length})</div>
+                  {matches.map((job) => (
+                    <div key={job.job_id} className="rounded-xl bg-white p-3 ring-1 ring-slate-200 hover:ring-blue-300 transition-all shadow-sm">
+                      <div className="flex justify-between items-start mb-1">
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-900">{job.title}</h4>
+                          <p className="text-[10px] text-slate-500">{job.company}</p>
+                        </div>
+                        <span className={`text-xs font-bold ${job.score > 70 ? 'text-emerald-600' : job.score > 40 ? 'text-amber-600' : 'text-slate-600'}`}>
+                          {job.score}%
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-600 line-clamp-2 mb-2">{job.description_preview}</p>
+                      <Button 
+                        size="sm" 
+                        className="w-full text-[10px] py-1 h-7"
+                        onClick={() => {
+                          navigate("/interview", { 
+                            state: { 
+                              skills: job.matched_skills || [],
+                              missing_skills: job.missing_skills || [],
+                              jobQuestions: job.questions || [],
+                              resume_score: job.score,
+                              jobTitle: job.title,
+                              job_id: job.job_id
+                            } 
+                          });
+                        }}
+                      >
+                        Start Interview
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : match ? (
                 <div className="grid gap-3">
                   <div className="rounded-xl bg-slate-50 p-4 ring-1 ring-slate-200">
                     <div className="text-xs font-medium text-slate-500">

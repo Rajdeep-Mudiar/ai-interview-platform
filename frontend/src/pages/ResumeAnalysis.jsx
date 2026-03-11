@@ -8,6 +8,7 @@ import { Input, Label, Textarea } from "../components/ui/Form";
 export default function ResumeAnalysis() {
   const navigate = useNavigate();
   const [file, setFile] = useState(null);
+  const [files, setFiles] = useState([]); // For folder/multiple uploads
   const [jd, setJd] = useState("");
   const [jobQuestions, setJobQuestions] = useState([]);
   const [jobId, setJobId] = useState(null);
@@ -37,14 +38,15 @@ export default function ResumeAnalysis() {
   }, []);
 
   async function analyze() {
-    if (!file) return;
+    const targetFile = file || files[0];
+    if (!targetFile) return;
     
     setBusy(true);
     const API_BASE = "http://127.0.0.1:8000";
     
     try {
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", targetFile);
       
       if (jd.trim()) {
         // Specific JD analysis
@@ -74,10 +76,10 @@ export default function ResumeAnalysis() {
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
-            Resume analysis
+            AI interview pipeline
           </h1>
           <p className="mt-1 text-sm text-slate-600">
-            Upload a resume and paste a job description to compute fit and gaps.
+            Upload a resume folder or file to compute fit and find matching jobs.
           </p>
         </div>
       </div>
@@ -93,12 +95,54 @@ export default function ResumeAnalysis() {
           <CardBody className="grid gap-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="resumeFile">Resume file</Label>
-                <Input
-                  id="resumeFile"
-                  type="file"
-                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                />
+                <Label htmlFor="resumeFile">Resume upload</Label>
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      id="resumeFile"
+                      type="file"
+                      className="hidden"
+                      onChange={(e) => {
+                        const selected = e.target.files?.[0];
+                        if (selected) {
+                          setFile(selected);
+                          setFiles([]);
+                        }
+                      }}
+                    />
+                    <Button 
+                      variant="secondary" 
+                      size="sm"
+                      onClick={() => document.getElementById('resumeFile').click()}
+                    >
+                      Choose File
+                    </Button>
+                    <input
+                      id="resumeFolder"
+                      type="file"
+                      webkitdirectory="true"
+                      directory="true"
+                      className="hidden"
+                      onChange={(e) => {
+                        const selectedFiles = Array.from(e.target.files || []).filter(f => f.name.endsWith('.pdf'));
+                        if (selectedFiles.length > 0) {
+                          setFiles(selectedFiles);
+                          setFile(null);
+                        }
+                      }}
+                    />
+                    <Button 
+                      variant="secondary" 
+                      size="sm"
+                      onClick={() => document.getElementById('resumeFolder').click()}
+                    >
+                      Upload Folder
+                    </Button>
+                  </div>
+                  <div className="text-[11px] text-slate-500">
+                    {file ? `File: ${file.name}` : files.length > 0 ? `${files.length} PDF(s) found in folder` : "No files selected"}
+                  </div>
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="jd">Job description (Optional)</Label>
