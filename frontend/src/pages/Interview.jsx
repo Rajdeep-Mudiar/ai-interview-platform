@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import * as faceapi from "face-api.js";
 import Button from "../components/ui/Button";
@@ -8,6 +8,7 @@ import { getUserSession } from "../utils/auth";
 
 function Interview(props) {
   const location = useLocation();
+  const navigate = useNavigate();
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const [questions, setQuestions] = useState([]);
@@ -435,12 +436,17 @@ function Interview(props) {
   };
 
   const generateReport = async () => {
+    console.log("[REPORT] Starting report generation...");
     const session = getUserSession();
-    if (!session) return;
+    if (!session) {
+      console.error("[REPORT] No session found, cannot generate report.");
+      return;
+    }
     
     setGeneratingReport(true);
     try {
       const avgInterviewScore = scores.length > 0 ? (totalScore / scores.length) : 0;
+      console.log("[REPORT] Calculated average interview score:", avgInterviewScore);
       
       const reportData = {
         name: session.name,
@@ -453,13 +459,18 @@ function Interview(props) {
         matched_skills: location.state?.skills || [],
         missing_skills: location.state?.missing_skills || []
       };
+      
+      console.log("[REPORT] Sending data to backend:", reportData);
 
       const res = await axios.post(`${API_BASE}/reports/generate`, reportData);
+      console.log("[REPORT] Backend response received:", res.data);
+      
       setReportUrl(res.data.download_url);
       setBackendResult(res.data);
+      console.log("[REPORT] State updated with report URL and backend results.");
     } catch (err) {
-      console.error("Failed to generate report:", err);
-      alert("Error generating report. Please try again.");
+      console.error("[REPORT] Failed to generate report:", err);
+      alert("Error generating report. Please check if the backend is running and try again.");
     } finally {
       setGeneratingReport(false);
     }
@@ -631,7 +642,7 @@ function Interview(props) {
                       ) : (
                         <div className="text-xs text-slate-400 italic">No report available for terminated sessions.</div>
                       )}
-                      <Button as="a" href="/dashboard" variant="secondary">
+                      <Button onClick={() => navigate("/dashboard")} variant="secondary">
                         Go to Dashboard
                       </Button>
                     </div>
@@ -692,10 +703,10 @@ function Interview(props) {
                   <div className="flex flex-wrap gap-2">
                     <Button
                       onClick={() => speak(questions[current])}
-                      variant={isSpeaking ? "emerald" : "secondary"}
+                      variant="secondary"
                       size="sm"
                       disabled={!isInterviewStarted || isRecording}
-                      className={isSpeaking ? "animate-pulse" : ""}
+                      className={isSpeaking ? "animate-pulse ring-2 ring-emerald-500 bg-emerald-50" : ""}
                     >
                       {isSpeaking ? "Speaking..." : "Ask"}
                     </Button>
