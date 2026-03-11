@@ -1,0 +1,202 @@
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import Button from "../components/ui/Button";
+import { Card, CardBody, CardHeader } from "../components/ui/Card";
+
+function RecruiterDashboard() {
+  const [alerts, setAlerts] = useState([]);
+  const [reportFile, setReportFile] = useState(null);
+  const [decision, setDecision] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    axios.get("http://localhost:8000/alerts").then((res) => {
+      setAlerts(res.data);
+    });
+  }, []);
+
+  async function generateReport() {
+    setBusy(true);
+    try {
+      const res = await fetch("http://localhost:8000/generate-report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: "Alex Johnson",
+          resume_score: 82,
+          interview_score: 86,
+          integrity_score: 91,
+          skills: ["Python", "React", "SQL"],
+          missing_skills: ["Docker", "AWS"],
+          recommendation: "Strong Hire",
+        }),
+      });
+      const data = await res.json();
+      setReportFile(data.file);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function getDecision() {
+    setBusy(true);
+    try {
+      const res = await fetch("http://localhost:8000/hiring-decision", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          resume_score: 82,
+          interview_score: 86,
+          integrity_score: 91,
+        }),
+      });
+      const data = await res.json();
+      setDecision(data);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="cb-container py-10 sm:py-14">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
+            Recruiter dashboard
+          </h1>
+          <p className="mt-1 text-sm text-slate-600">
+            Review integrity alerts, generate reports, and request a hiring
+            decision.
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-8 grid gap-6 lg:grid-cols-12">
+        <Card className="lg:col-span-4">
+          <CardHeader className="pb-4">
+            <div className="text-sm font-semibold text-slate-900">
+              Candidate snapshot
+            </div>
+            <div className="text-sm text-slate-600">
+              Example candidate summary.
+            </div>
+          </CardHeader>
+          <CardBody className="grid gap-3">
+            <div className="rounded-xl bg-slate-50 p-4 ring-1 ring-slate-200">
+              <div className="text-sm font-semibold text-slate-900">
+                Alex Johnson
+              </div>
+              <div className="mt-2 grid gap-1 text-sm text-slate-700">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-600">Resume</span>
+                  <span className="font-medium">82%</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-600">Interview</span>
+                  <span className="font-medium">86%</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-600">Integrity</span>
+                  <span className="font-medium">91%</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-2">
+              <Button onClick={generateReport} disabled={busy}>
+                {busy ? "Working..." : "Generate interview report"}
+              </Button>
+              <Button onClick={getDecision} variant="secondary" disabled={busy}>
+                Get hiring decision
+              </Button>
+              {reportFile && (
+                <Button
+                  as="a"
+                  href={`http://localhost:8000/reports/${reportFile}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  variant="secondary"
+                >
+                  Download report
+                </Button>
+              )}
+            </div>
+          </CardBody>
+        </Card>
+
+        <div className="grid gap-6 lg:col-span-8">
+          <Card>
+            <CardHeader className="pb-4">
+              <div className="text-sm font-semibold text-slate-900">
+                Integrity alerts
+              </div>
+              <div className="text-sm text-slate-600">
+                Alerts posted during interview/proctoring.
+              </div>
+            </CardHeader>
+            <CardBody>
+              {alerts?.length ? (
+                <ul className="grid gap-2 text-sm text-slate-700">
+                  {alerts.map((alert, i) => (
+                    <li
+                      key={i}
+                      className="flex items-start justify-between gap-4 rounded-xl bg-white p-3 ring-1 ring-slate-200"
+                    >
+                      <span>{alert.message ?? JSON.stringify(alert)}</span>
+                      <span className="text-xs text-slate-500">
+                        {alert.type ?? "alert"}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="rounded-xl bg-slate-50 p-5 text-sm text-slate-600 ring-1 ring-slate-200">
+                  No alerts received yet.
+                </div>
+              )}
+            </CardBody>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-4">
+              <div className="text-sm font-semibold text-slate-900">
+                Decision
+              </div>
+              <div className="text-sm text-slate-600">
+                Final score and recommendation.
+              </div>
+            </CardHeader>
+            <CardBody>
+              {decision ? (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="rounded-xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                    <div className="text-xs font-medium text-slate-500">
+                      Final score
+                    </div>
+                    <div className="mt-1 text-2xl font-semibold text-slate-900">
+                      {decision.final_score}
+                    </div>
+                  </div>
+                  <div className="rounded-xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                    <div className="text-xs font-medium text-slate-500">
+                      Recommendation
+                    </div>
+                    <div className="mt-1 text-2xl font-semibold text-slate-900">
+                      {decision.decision}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-xl bg-slate-50 p-5 text-sm text-slate-600 ring-1 ring-slate-200">
+                  Request a hiring decision to see results here.
+                </div>
+              )}
+            </CardBody>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default RecruiterDashboard;
