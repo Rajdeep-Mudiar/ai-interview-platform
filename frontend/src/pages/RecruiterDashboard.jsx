@@ -35,9 +35,15 @@ function RecruiterDashboard() {
   const [jobQuestions, setJobQuestions] = useState([{ question: "", answer: "" }]);
 
   useEffect(() => {
-    axios.get(`${API_BASE}/alerts`).then((res) => {
-      setAlerts(res.data);
-    });
+    const fetchAlerts = () => {
+      axios.get(`${API_BASE}/alerts`).then((res) => {
+        setAlerts(res.data);
+      });
+    };
+
+    fetchAlerts();
+    const interval = setInterval(fetchAlerts, 3000); // Poll every 3 seconds for live dashboard
+    
     if (session?.id) {
       axios
         .get(`${API_BASE}/jobs`, {
@@ -45,7 +51,26 @@ function RecruiterDashboard() {
         })
         .then((res) => setJobs(res.data));
     }
+
+    return () => clearInterval(interval);
   }, [session]);
+
+  const clearAlerts = async () => {
+    try {
+      await axios.delete(`${API_BASE}/alerts`);
+      setAlerts([]);
+    } catch (err) {
+      console.error("Failed to clear alerts:", err);
+    }
+  };
+
+  const getSeverityColor = (severity) => {
+    switch (severity?.toLowerCase()) {
+      case "high": return "bg-rose-50 ring-rose-200 text-rose-900";
+      case "medium": return "bg-amber-50 ring-amber-200 text-amber-900";
+      default: return "bg-blue-50 ring-blue-200 text-blue-900";
+    }
+  };
 
   const addQuestion = () => {
     setJobQuestions([...jobQuestions, { question: "", answer: "" }]);
@@ -141,19 +166,42 @@ function RecruiterDashboard() {
       <div className="mt-8 grid gap-6 lg:grid-cols-12">
         <Card className="lg:col-span-4">
           <CardHeader className="pb-4">
-            <div className="text-sm font-semibold text-slate-900">
-              Integrity Alerts
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-semibold text-slate-900">
+                Integrity Alerts
+              </div>
+              {alerts.length > 0 && (
+                <button
+                  onClick={clearAlerts}
+                  className="text-xs font-medium text-rose-600 hover:text-rose-700"
+                >
+                  Clear All
+                </button>
+              )}
             </div>
             <div className="text-sm text-slate-600">
               Suspicious activity detected during interviews.
             </div>
           </CardHeader>
-          <CardBody className="grid gap-3">
+          <CardBody className="grid gap-3 max-h-[400px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-200">
             {alerts.length > 0 ? (
               alerts.map((alert, idx) => (
-                <div key={idx} className="rounded-xl bg-rose-50 p-4 ring-1 ring-rose-200">
-                  <div className="text-sm font-semibold text-rose-900">{alert.type}</div>
-                  <div className="text-xs text-rose-700">{alert.message}</div>
+                <div key={idx} className={`rounded-xl p-4 ring-1 ${getSeverityColor(alert.severity)} transition-all hover:scale-[1.02]`}>
+                  <div className="flex justify-between items-start">
+                    <div className="text-sm font-semibold">{alert.type.replace('_', ' ').toUpperCase()}</div>
+                    <div className="text-[10px] opacity-60 font-mono">{alert.timestamp?.split(' ')[1]}</div>
+                  </div>
+                  <div className="text-xs mt-1">{alert.message}</div>
+                  <div className="mt-2 flex items-center justify-between">
+                    <div className={`text-[10px] font-bold uppercase tracking-wider ${alert.severity === 'high' ? 'text-rose-600' : 'text-amber-600'}`}>
+                      {alert.severity} Risk
+                    </div>
+                    {alert.severity_score && (
+                      <div className="text-[10px] text-slate-400 font-medium">
+                        Score: {alert.severity_score.toFixed(1)}
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))
             ) : (

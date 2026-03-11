@@ -46,12 +46,12 @@ function Proctoring() {
         .withFaceExpressions();
 
       if (detections.length === 0) {
-        setWarning("⚠️ No face detected");
+        setWarning("No face detected");
         return;
       }
 
       if (detections.length > 1) {
-        setWarning("⚠️ Multiple faces detected");
+        setWarning("multiple persons detected");
         return;
       }
 
@@ -70,14 +70,14 @@ function Proctoring() {
       const eyeDistance = Math.abs(leftEye[0].x - rightEye[3].x);
 
       if (eyeDistance < 40) {
-        setWarning("⚠️ Looking away from screen");
+        setWarning("look at the center");
         setCheatCount((prev) => prev + 1);
       } else {
         setWarning("");
       }
 
       if (nose[3].y > 260) {
-        setWarning("⚠️ Possible phone usage detected");
+        setWarning("foreign object detected");
         setCheatCount((prev) => prev + 1);
       }
     }, 3000);

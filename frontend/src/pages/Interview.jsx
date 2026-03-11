@@ -41,8 +41,11 @@ function Interview(props) {
 
   // Control AI Proctoring Server
   const startAIProctoring = async () => {
+    const session = getUserSession();
     try {
-      await axios.post(`${AI_SERVICE_BASE}/start`);
+      await axios.post(`${AI_SERVICE_BASE}/start`, {
+        user_id: session?.id || "unknown"
+      });
       console.log("AI Proctoring services started.");
     } catch (err) {
       console.warn("AI Proctoring server not reachable. Ensure 'python server.py' is running in ai-services folder.");
@@ -60,23 +63,75 @@ function Interview(props) {
 
   // Polling for backend alerts from AI services
   useEffect(() => {
+    let timeoutId;
+    const session = getUserSession();
     const fetchAlerts = async () => {
+      if (interviewFinished) return;
       try {
-        const res = await axios.get(`${API_BASE}/alerts`);
+        const res = await axios.get(`${API_BASE}/alerts`, {
+          params: { user_id: session?.id }
+        });
         if (res.data.length > backendAlerts.length) {
           const latestAlert = res.data[res.data.length - 1];
-          setAlert(latestAlert.message || latestAlert.type);
+          // Display the exact message requested by the user
+          const displayMsg = latestAlert.message || latestAlert.type;
+          setAlert(displayMsg);
           setBackendAlerts(res.data);
-          // Decrease integrity for backend-detected cheating
-          setIntegrity((prev) => Math.max(prev - 10, 0));
+          
+          // Decrease integrity based on severity
+          const deduction = latestAlert.severity === "high" ? 15 : 5;
+          setIntegrity((prev) => Math.max(prev - deduction, 0));
+
+          // Clear the alert after 4 seconds so it doesn't stay forever
+          if (timeoutId) clearTimeout(timeoutId);
+          timeoutId = setTimeout(() => {
+            setAlert("");
+          }, 4000);
         }
       } catch (err) {
         console.error("Failed to fetch alerts:", err);
       }
     };
-    const interval = setInterval(fetchAlerts, 5000);
-    return () => clearInterval(interval);
+    const interval = setInterval(fetchAlerts, 2000); // Poll every 2 seconds for real-time feel
+    return () => {
+      clearInterval(interval);
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, [backendAlerts]);
+
+  // Tab switching detection
+  useEffect(() => {
+    let timeoutId;
+    const handleVisibilityChange = async () => {
+      if (document.hidden && isInterviewStarted && !interviewFinished) {
+        const msg = "tab switching detected";
+        setAlert(msg);
+        setIntegrity((prev) => Math.max(prev - 10, 0));
+        
+        try {
+          await axios.post(`${API_BASE}/alert`, {
+            type: "tab_switch",
+            message: msg,
+            severity: "medium",
+            timestamp: new Date().toLocaleTimeString()
+          });
+        } catch (err) {
+          console.error("Failed to send tab switch alert:", err);
+        }
+
+        if (timeoutId) clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => {
+          setAlert("");
+        }, 4000);
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [isInterviewStarted, interviewFinished]);
 
   // Load questions from backend based on skills
   async function loadQuestions(matched_skills, missing_skills = [], recruiterQuestions = []) {
@@ -162,6 +217,19 @@ function Interview(props) {
   // Real-time face detection
   useEffect(() => {
     let interval;
+    let localTimeout;
+
+    const setLocalAlert = (msg) => {
+      setAlert(msg);
+      if (localTimeout) clearTimeout(localTimeout);
+      localTimeout = setTimeout(() => {
+        setAlert(prev => {
+          const localMsgs = ["look at the center", "multiple persons detected", "No face detected", "foreign object detected", "speech detected", "Interview terminated due to multiple integrity violations."];
+          return localMsgs.includes(prev) ? "" : prev;
+        });
+      }, 4000);
+    };
+
     async function detect() {
       if (!videoRef.current || videoRef.current.readyState !== 4) return;
       // Multiple faces
@@ -170,14 +238,16 @@ function Interview(props) {
         new faceapi.TinyFaceDetectorOptions(),
       );
       if (detections.length > 1) {
-        setAlert("Multiple faces detected!");
+        setLocalAlert("multiple persons detected");
         setIntegrity((prev) => Math.max(prev - 15, 0));
         return;
       }
       // No face
       if (detections.length === 0) {
-        setAlert("No face detected");
-        setIntegrity((prev) => Math.max(prev - 5, 0));
+        if (isInterviewStarted && !interviewFinished) {
+          setLocalAlert("No face detected");
+          setIntegrity((prev) => Math.max(prev - 5, 0));
+        }
         return;
       }
       // Looking away & emotion detection
@@ -195,14 +265,23 @@ function Interview(props) {
         const rightEye = detection.landmarks.getRightEye();
         if (nose && leftEye && rightEye) {
           const noseX = nose[3].x;
+          const noseY = nose[3].y;
           const leftEyeX = leftEye[0].x;
           const rightEyeX = rightEye[3].x;
           const eyeDist = Math.abs(rightEyeX - leftEyeX);
           const center = (leftEyeX + rightEyeX) / 2;
           const headTurn = Math.abs(noseX - center) / eyeDist;
+          
           if (headTurn > 0.25) {
-            setAlert("Looking away from screen");
+            setLocalAlert("look at the center");
             setIntegrity((prev) => Math.max(prev - 5, 0));
+            return;
+          }
+
+          // Local check for phone usage (looking down at lap)
+          if (noseY > 280) {
+            setLocalAlert("foreign object detected");
+            setIntegrity((prev) => Math.max(prev - 10, 0));
             return;
           }
         }
@@ -235,11 +314,13 @@ function Interview(props) {
         else score = 3;
         setBehaviorScore(score);
       }
-      setAlert("");
     }
-    interval = setInterval(detect, 2000);
-    return () => clearInterval(interval);
-  }, []);
+    interval = setInterval(detect, 500); // Reduced delay to 500ms for faster real-time detection
+    return () => {
+      clearInterval(interval);
+      if (localTimeout) clearTimeout(localTimeout);
+    };
+  }, [isInterviewStarted, interviewFinished]);
 
   // Text-to-Speech
   function speak(text) {
@@ -432,6 +513,10 @@ function Interview(props) {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
       }
+      // Auto-generate report at the end
+      setTimeout(() => {
+        generateReport();
+      }, 2000);
     }
   };
 
@@ -449,6 +534,14 @@ function Interview(props) {
       const avgInterviewScore = scores.length > 0 ? (totalScore / scores.length) : 0;
       console.log("[REPORT] Calculated average interview score:", avgInterviewScore);
       
+      // Calculate proctoring score based on alerts
+      let pScore = 100;
+      backendAlerts.forEach(alert => {
+        if (alert.severity === "high") pScore -= 15;
+        else pScore -= 5;
+      });
+      pScore = Math.max(0, pScore);
+
       const reportData = {
         user_id: String(session.id), // Ensure string format
         name: session.name,
@@ -458,6 +551,8 @@ function Interview(props) {
         resume_score: location.state?.resume_score || 85, 
         interview_score: avgInterviewScore,
         integrity_score: integrity,
+        proctoring_score: pScore,
+        proctoring_alerts: backendAlerts,
         matched_skills: location.state?.skills || [],
         missing_skills: location.state?.missing_skills || [],
         job_id: location.state?.job_id ? String(location.state.job_id) : null
@@ -551,9 +646,6 @@ function Interview(props) {
                       No integrity alerts.
                     </div>
                   )}
-                  <Button onClick={sendGazeAlert} variant="danger">
-                    Simulate looking-away alert
-                  </Button>
                 </div>
               </div>
 
@@ -564,6 +656,16 @@ function Interview(props) {
                   muted
                   className="h-full w-full object-cover"
                 />
+                
+                {/* Proctoring Warning Overlay */}
+                {alert && isInterviewStarted && !interviewFinished && (
+                  <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 w-max max-w-[90%] animate-bounce">
+                    <div className="rounded-full bg-rose-600 px-6 py-2 text-sm font-bold text-white shadow-lg ring-2 ring-white/50 backdrop-blur-sm">
+                      ⚠️ {alert.toUpperCase()}
+                    </div>
+                  </div>
+                )}
+
                 {!isInterviewStarted && !interviewFinished && (
                   <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-slate-900/60 p-6 text-center text-white backdrop-blur-sm">
                     <div className="mb-4 rounded-full bg-white/10 p-4 ring-1 ring-white/30">

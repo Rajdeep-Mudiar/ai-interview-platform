@@ -44,6 +44,12 @@ class JobUpdate(BaseModel):
     questions: Optional[List[JobQuestion]] = None
 
 # --- Interview & Result Models ---
+class ProctoringAlert(BaseModel):
+    type: str
+    message: str
+    severity: str
+    timestamp: str
+
 class InterviewResult(BaseModel):
     user_id: str
     job_id: Optional[str] = None
@@ -54,6 +60,8 @@ class InterviewResult(BaseModel):
     resume_score: float
     interview_score: float
     integrity_score: float
+    proctoring_score: Optional[float] = 100.0
+    proctoring_alerts: List[ProctoringAlert] = []
     overall_score: float
     matched_skills: List[str]
     missing_skills: List[str]
@@ -71,6 +79,8 @@ class ReportRequest(BaseModel):
     resume_score: float
     interview_score: float
     integrity_score: float
+    proctoring_score: Optional[float] = 100.0
+    proctoring_alerts: List[Dict[str, Any]] = []
     matched_skills: List[str]
     missing_skills: List[str]
     job_id: Optional[str] = None

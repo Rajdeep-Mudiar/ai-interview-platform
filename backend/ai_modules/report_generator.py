@@ -75,7 +75,8 @@ def generate_report(data):
         ["Overall Match", f"{data.get('overall_score', 0)}%"],
         ["Resume Fit", f"{data.get('resume_score', 0)}%"],
         ["Interview Performance", f"{round(interview_display * 10, 1)}%"],
-        ["Integrity & Trust", f"{data.get('integrity_score', 0)}%"]
+        ["Integrity & Trust", f"{data.get('integrity_score', 0)}%"],
+        ["Proctoring Compliance", f"{data.get('proctoring_score', 100)}%"]
     ]
     
     scores_table = Table(scores_data, colWidths=[200, 100])
@@ -89,6 +90,30 @@ def generate_report(data):
     ]))
     story.append(scores_table)
     story.append(Spacer(1, 20))
+
+    # Proctoring Section
+    if data.get('proctoring_alerts'):
+        story.append(Paragraph("Proctoring Alerts", header_style))
+        alert_data = [["Type", "Message", "Severity", "Timestamp"]]
+        for alert in data['proctoring_alerts']:
+            alert_data.append([
+                alert.get('type', 'N/A'),
+                alert.get('message', 'N/A'),
+                alert.get('severity', 'medium'),
+                alert.get('timestamp', 'N/A')
+            ])
+        
+        alert_table = Table(alert_data, colWidths=[100, 180, 70, 110])
+        alert_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#fee2e2")),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor("#991b1b")),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#fca5a5")),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        story.append(alert_table)
+        story.append(Spacer(1, 20))
 
     # Skills Section
     story.append(Paragraph("Skills Analysis", header_style))

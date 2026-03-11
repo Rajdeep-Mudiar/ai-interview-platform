@@ -45,19 +45,53 @@ app.include_router(jobs_router)
 app.include_router(stats_router)
 app.include_router(leaderboard_router)
 
-alerts = []
+from typing import List, Dict, Any
+from datetime import datetime
+
+# Existing alerts in memory (consider DB for production)
+alerts: List[Dict[str, Any]] = []
 
 @app.post("/alert")
 def receive_alert(data: dict):
-
+    # Ensure data has required fields, add if missing
+    if "timestamp" not in data:
+        data["timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    if "severity" not in data:
+        # Default severity based on type
+        high_severity_types = ["multiple_person", "forbidden_object", "background_voice", "no_face"]
+        data["severity"] = "high" if data.get("type") in high_severity_types else "medium"
+    
     alerts.append(data)
+    print(f"DEBUG: Alert received: {data}")
+    return {"status": "received"}
 
-    return {"status":"received"}
+from analytics.integrity import cheating_risk, calculate_proctoring_score
 
 @app.get("/alerts")
-def get_alerts():
-
+def get_alerts(user_id: str = None):
+    if user_id:
+        return [a for a in alerts if a.get("user_id") == user_id]
     return alerts
+
+@app.get("/proctoring_summary")
+def get_proctoring_summary(user_id: str = None):
+    user_alerts = [a for a in alerts if a.get("user_id") == user_id] if user_id else alerts
+    score = calculate_proctoring_score(user_alerts)
+    risk = cheating_risk(score)
+    return {
+        "score": score,
+        "risk": risk,
+        "alerts": user_alerts
+    }
+
+@app.delete("/alerts")
+def clear_alerts(user_id: str = None):
+    global alerts
+    if user_id:
+        alerts = [a for a in alerts if a.get("user_id") != user_id]
+        return {"status": f"cleared alerts for user {user_id}"}
+    alerts = []
+    return {"status": "cleared all alerts"}
 
 @app.post("/upload_resume")
 async def upload_resume(file: UploadFile):
@@ -97,19 +131,13 @@ def evaluate(data:dict):
     return result
 
 @app.post("/final_score")
-
 def final_score(data:dict):
-
-    resume_score = data["resume_score"]
-    interview_score = data["interview_score"]
-    cheating_flags = data["cheating_flags"]
-
     result = calculate_final_score(
-        resume_score,
-        interview_score,
-        cheating_flags
+        data.get("resume_score", 0),
+        data.get("interview_score", 0),
+        data.get("integrity_score", 100),
+        data.get("proctoring_score", 100)
     )
-
     return result
 
 @app.post("/cheating_score")

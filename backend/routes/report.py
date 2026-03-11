@@ -18,19 +18,16 @@ def create_report(data: ReportRequest):
     results_col = get_results_col()
     try:
         # 1. Calculate Backend Logic
-        # Convert integrity (100) to cheating flags (count) for calculate_final_score logic
-        # If integrity is 100, flags = 0. If 0, flags = 20.
-        cheating_flags = (100 - data.integrity_score) / 5
-        
-        # Scoring logic from backend
+        # Scoring logic from backend (weighted average of technical + integrity penalties)
         scoring_result = calculate_final_score(
             data.resume_score,
             data.interview_score,
-            cheating_flags
+            data.integrity_score,
+            data.proctoring_score if hasattr(data, 'proctoring_score') else 100.0
         )
         
-        # Risk logic
-        c_risk = "High" if data.integrity_score < 40 else ("Medium" if data.integrity_score < 70 else "Low")
+        # Risk logic using proctoring score
+        c_risk = cheating_risk(data.proctoring_score if hasattr(data, 'proctoring_score') else 100.0)
         
         # Explanation/Suggestions from backend
         reasons = generate_explanation(
@@ -45,7 +42,9 @@ def create_report(data: ReportRequest):
         report_data.update({
             "overall_score": scoring_result["final_score"],
             "recommendation": scoring_result["recommendation"],
-            "suggestions": reasons
+            "suggestions": reasons,
+            "proctoring_score": data.proctoring_score if hasattr(data, 'proctoring_score') else 100.0,
+            "proctoring_alerts": data.proctoring_alerts if hasattr(data, 'proctoring_alerts') else []
         })
         
         # 3. Save to MongoDB Results collection
@@ -66,6 +65,8 @@ def create_report(data: ReportRequest):
                 "resume_score": data.resume_score,
                 "interview_score": data.interview_score,
                 "integrity_score": data.integrity_score,
+                "proctoring_score": data.proctoring_score if hasattr(data, 'proctoring_score') else 100.0,
+                "proctoring_alerts": data.proctoring_alerts if hasattr(data, 'proctoring_alerts') else [],
                 "overall_score": scoring_result["final_score"],
                 "matched_skills": data.matched_skills,
                 "missing_skills": data.missing_skills,

@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 class VoiceProctor:
     def __init__(self, api_url="http://127.0.0.1:8000/alert", model_size="base"):
         self.api_url = api_url
+        self.user_id = "unknown"
         logger.info(f"Loading Whisper model ({model_size})...")
         self.model = whisper.load_model(model_size)
         self.audio = pyaudio.PyAudio()
@@ -68,15 +69,23 @@ class VoiceProctor:
             pass
 
     def send_alert(self, detected_text):
+        now = time.time()
+        payload = {
+            "user_id": self.user_id,
+            "type": "background_voice",
+            "message": "speech detected",
+            "severity": "high",
+            "severity_score": 1.0,
+            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(now)),
+            "detected_text": detected_text # Keep the text for records but message is what user wants
+        }
         try:
             requests.post(
                 self.api_url,
-                json={
-                    "type": "background_voice",
-                    "message": f"Possible assistance detected: '{detected_text}'"
-                },
+                json=payload,
                 timeout=2
             )
+            logger.info(f"VOICE ALERT SENT: speech detected ({detected_text})")
         except Exception as e:
             logger.error(f"Failed to send voice alert: {e}")
 

@@ -33,21 +33,24 @@ app.add_middleware(
 # Global process holders
 vision_process = None
 voice_process = None
+active_user_id = None
 
-def run_voice_proctor():
+def run_voice_proctor(user_id):
     """Function to run the voice proctor in a separate process."""
     try:
-        logger.info("Initializing Voice Proctor...")
+        logger.info(f"Initializing Voice Proctor for user {user_id}...")
         proctor = VoiceProctor()
+        proctor.user_id = user_id
         proctor.run()
     except Exception as e:
         logger.error(f"Voice Proctor process failed: {e}")
 
-def run_visual_proctor():
+def run_visual_proctor(user_id):
     """Function to run the visual proctor in a separate process."""
     try:
-        logger.info("Initializing Visual Proctor (OpenCV/MediaPipe)...")
+        logger.info(f"Initializing Visual Proctor for user {user_id} (OpenCV/MediaPipe)...")
         engine = ProctorEngine()
+        engine.user_id = user_id
         engine.run()
     except Exception as e:
         logger.error(f"Visual Proctor failed: {e}")
@@ -56,36 +59,40 @@ def run_visual_proctor():
 def get_status():
     return {
         "vision_active": vision_process is not None and vision_process.is_alive(),
-        "voice_active": voice_process is not None and voice_process.is_alive()
+        "voice_active": voice_process is not None and voice_process.is_alive(),
+        "active_user_id": active_user_id
     }
 
 @app.post("/start")
-def start_proctoring():
-    global vision_process, voice_process
+def start_proctoring(data: dict):
+    global vision_process, voice_process, active_user_id
+    
+    user_id = data.get("user_id", "unknown")
     
     if (vision_process and vision_process.is_alive()) or (voice_process and voice_process.is_alive()):
-        return {"message": "Proctoring services are already running."}
+        return {"message": "Proctoring services are already running.", "active_user_id": active_user_id}
     
-    logger.info("Starting CareBridge AI Proctoring Services...")
+    logger.info(f"Starting CareBridge AI Proctoring Services for user {user_id}...")
+    active_user_id = user_id
     
     # 1. Start Voice Proctor in background
-    voice_process = multiprocessing.Process(target=run_voice_proctor, name="VoiceProctorProcess")
+    voice_process = multiprocessing.Process(target=run_voice_proctor, args=(user_id,), name="VoiceProctorProcess")
     voice_process.daemon = True
     voice_process.start()
     
     # 2. Start Visual Proctor in background (it will open its own window)
-    vision_process = multiprocessing.Process(target=run_visual_proctor, name="VisualProctorProcess")
+    vision_process = multiprocessing.Process(target=run_visual_proctor, args=(user_id,), name="VisualProctorProcess")
     vision_process.daemon = True
     vision_process.start()
     
     logger.info("✅ All AI Proctoring services launched.")
-    return {"message": "AI Proctoring services started successfully."}
+    return {"message": "AI Proctoring services started successfully.", "user_id": user_id}
 
 @app.post("/stop")
 def stop_proctoring():
-    global vision_process, voice_process
+    global vision_process, voice_process, active_user_id
     
-    logger.info("Shutting down AI Proctoring services...")
+    logger.info(f"Shutting down AI Proctoring services for user {active_user_id}...")
     
     if vision_process and vision_process.is_alive():
         vision_process.terminate()
@@ -97,6 +104,7 @@ def stop_proctoring():
         voice_process.join()
         voice_process = None
         
+    active_user_id = None
     logger.info("AI Proctoring services stopped.")
     return {"message": "AI Proctoring services stopped successfully."}
 
