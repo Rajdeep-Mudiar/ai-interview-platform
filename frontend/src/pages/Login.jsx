@@ -12,6 +12,7 @@ function Login() {
   const navigate = useNavigate();
 
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("candidate");
   const [busy, setBusy] = useState(false);
@@ -20,8 +21,12 @@ function Login() {
 
   async function onSubmit(e) {
     e.preventDefault();
-    if (!name || !password) {
-      setError("Please enter a name and password.");
+    if (!name || !password || (mode === "signup" && !email)) {
+      if (mode === "signup") {
+        setError("Please enter a name, email, and password.");
+      } else {
+        setError("Please enter a name and password.");
+      }
       return;
     }
     setError("");
@@ -31,6 +36,7 @@ function Login() {
       if (mode === "signin") {
         res = await axios.post(`${API_BASE}/auth/signin`, {
           name,
+          email: email || undefined,
           password,
           role,
         });
@@ -41,6 +47,7 @@ function Login() {
             : `${API_BASE}/auth/signup/candidate`;
         res = await axios.post(signupPath, {
           name,
+          email,
           password,
         });
       }
@@ -136,6 +143,17 @@ function Login() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Enter your name"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your email"
                 />
               </div>
 
