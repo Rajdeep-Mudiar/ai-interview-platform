@@ -6,21 +6,12 @@ from ai_modules.report_generator import generate_report
 from analytics.scoring import calculate_final_score
 from analytics.explain import generate_explanation
 from analytics.integrity import cheating_risk
+from database.mongo import get_results_col
+from models import ReportRequest, InterviewResult
 import os
 
 router = APIRouter(prefix="/reports", tags=["reports"])
-
-class ReportRequest(BaseModel):
-    name: str
-    email: Optional[str] = "N/A"
-    phone: Optional[str] = "N/A"
-    job_title: Optional[str] = "N/A"
-    # We take raw data and calculate the rest on backend
-    resume_score: float
-    interview_score: float # Average out of 10
-    integrity_score: float # Out of 100
-    matched_skills: List[str]
-    missing_skills: List[str]
+results_col = get_results_col()
 
 @router.post("/generate")
 def create_report(data: ReportRequest):
@@ -49,17 +40,39 @@ def create_report(data: ReportRequest):
         )
         
         # 2. Prepare full data for PDF
-        report_data = data.dict()
+        report_data = data.model_dump()
         report_data.update({
             "overall_score": scoring_result["final_score"],
             "recommendation": scoring_result["recommendation"],
             "suggestions": reasons
         })
         
-        # 3. Generate PDF
+        # 3. Save to MongoDB Results collection
+        try:
+            result_doc = InterviewResult(
+                user_id=os.getenv("USER_ID_PLACEHOLDER", "unknown"), # Ideally passed from frontend session
+                job_id=data.job_id,
+                name=data.name,
+                email=data.email,
+                phone=data.phone,
+                job_title=data.job_title,
+                resume_score=data.resume_score,
+                interview_score=data.interview_score,
+                integrity_score=data.integrity_score,
+                overall_score=scoring_result["final_score"],
+                matched_skills=data.matched_skills,
+                missing_skills=data.missing_skills,
+                recommendation=scoring_result["recommendation"],
+                suggestions=reasons
+            )
+            results_col.insert_one(result_doc.model_dump())
+        except Exception as mongo_err:
+            print(f"Failed to save result to MongoDB: {mongo_err}")
+        
+        # 4. Generate PDF
         filename = generate_report(report_data)
         
-        # 4. Return results (text + download)
+        # 5. Return results (text + download)
         return {
             "overall_score": scoring_result["final_score"],
             "recommendation": scoring_result["recommendation"],

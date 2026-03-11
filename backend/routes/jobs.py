@@ -5,26 +5,10 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from database.mongo import get_jobs_col
+from models import JobCreate, JobUpdate, JobQuestion
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 jobs_col = get_jobs_col()
-
-
-class JobQuestion(BaseModel):
-    question: str
-    answer: Optional[str] = ""
-
-class JobCreate(BaseModel):
-    recruiter_id: str
-    title: str
-    description: str
-    questions: List[JobQuestion]
-
-
-class JobUpdate(BaseModel):
-    title: Optional[str] = None
-    description: Optional[str] = None
-    questions: Optional[List[JobQuestion]] = None
 
 
 def _job_to_public(doc):

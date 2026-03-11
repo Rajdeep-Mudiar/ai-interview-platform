@@ -10,18 +10,20 @@ export default function ResumeAnalysis() {
   const [file, setFile] = useState(null);
   const [jd, setJd] = useState("");
   const [jobQuestions, setJobQuestions] = useState([]);
+  const [jobId, setJobId] = useState(null);
   const [result, setResult] = useState(null);
   const [busy, setBusy] = useState(false);
 
   // If navigated from Jobs page with ?jobId=..., fetch job and prefill JD.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const jobId = params.get("jobId");
-    if (!jobId) return;
+    const jId = params.get("jobId");
+    if (!jId) return;
+    setJobId(jId);
     const API_BASE = "http://127.0.0.1:8000";
     async function loadJob() {
       try {
-        const res = await fetch(`${API_BASE}/jobs/${jobId}`);
+        const res = await fetch(`${API_BASE}/jobs/${jId}`);
         if (!res.ok) return;
         const job = await res.json();
         setJd(job.description || "");
@@ -206,7 +208,8 @@ export default function ResumeAnalysis() {
                         missing_skills: result.missing_skills || [],
                         jobQuestions: jobQuestions,
                         resume_score: result.score,
-                        jobTitle: jd.split("\n")[0].substring(0, 30) // Simple job title extraction
+                        jobTitle: jd.split("\n")[0].substring(0, 30), // Simple job title extraction
+                        job_id: jobId
                       } 
                     });
                   }}

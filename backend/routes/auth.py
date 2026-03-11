@@ -6,22 +6,11 @@ import bcrypt
 import logging
 
 from database.mongo import get_users_col
+from models import SignUpBody, SignInBody
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["auth"])
 users_col = get_users_col()
-
-class UserBase(BaseModel):
-    email: EmailStr
-    role: str  # "candidate" or "recruiter"
-
-class SignUpBody(UserBase):
-    name: str
-    password: str
-    company: Optional[str] = None  # Optional field, primarily for recruiters
-
-class SignInBody(UserBase):
-    password: str
 
 def _user_to_public(doc):
     return {

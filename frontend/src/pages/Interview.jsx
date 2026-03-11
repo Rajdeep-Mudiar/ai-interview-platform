@@ -457,7 +457,8 @@ function Interview(props) {
         interview_score: avgInterviewScore,
         integrity_score: integrity,
         matched_skills: location.state?.skills || [],
-        missing_skills: location.state?.missing_skills || []
+        missing_skills: location.state?.missing_skills || [],
+        job_id: location.state?.job_id || null
       };
       
       console.log("[REPORT] Sending data to backend:", reportData);
