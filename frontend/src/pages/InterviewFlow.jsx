@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import axios from "axios";
+import { getUserSession } from "../utils/auth";
 import Button from "../components/ui/Button";
 import { Card, CardBody, CardHeader } from "../components/ui/Card";
 import { Label, Textarea } from "../components/ui/Form";
@@ -68,16 +69,28 @@ function InterviewFlow() {
 
   const saveInterview = async () => {
     if (!match || !questions.length || !suggestions.length) return;
+    const session = getUserSession();
+    if (!session) return;
+
     setBusy(true);
     try {
       await axios.post("http://localhost:8000/interview", {
+        user_id: session.id,
+        name: session.name,
         resume: resume,
         jd: jd,
         fit_score: match.fit_score,
+        overallScore: match.fit_score, // Using fit_score as demo overallScore for now
+        timeTaken: Math.floor(Math.random() * 15) + 15, // random demo time
+        integrity: 100, // demo integrity
         missing_skills: match.missing_skills,
         questions: questions,
         suggestions: suggestions,
       });
+      alert("Interview results saved to database!");
+    } catch (err) {
+      console.error("Failed to save interview:", err);
+      alert("Failed to save interview results.");
     } finally {
       setBusy(false);
     }

@@ -36,7 +36,11 @@ function App() {
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route
                     path="/recruiter-dashboard"
-                    element={<RecruiterDashboard />}
+                    element={
+                      <ProtectedRoute role="recruiter">
+                        <RecruiterDashboard />
+                      </ProtectedRoute>
+                    }
                   />
                   <Route path="/jobs" element={<Jobs />} />
                   <Route path="/report" element={<Report />} />

@@ -1,4 +1,9 @@
+import { getUserSession } from "../utils/auth";
+
 export default function Footer() {
+  const session = getUserSession();
+  const isRecruiter = session?.role === "recruiter";
+
   return (
     <footer className="cb-footer">
       <div className="cb-footer__inner">
@@ -18,9 +23,11 @@ export default function Footer() {
             <a className="cb-footer__link" href="/interview-flow">
               Interview pipeline
             </a>
-            <a className="cb-footer__link" href="/recruiter-dashboard">
-              Recruiter dashboard
-            </a>
+            {isRecruiter && (
+              <a className="cb-footer__link" href="/recruiter-dashboard">
+                Recruiter dashboard
+              </a>
+            )}
           </div>
           <div className="cb-footerCol md:justify-self-end">
             <div className="cb-footer__heading">Support</div>

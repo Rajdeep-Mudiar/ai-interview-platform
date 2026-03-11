@@ -1,14 +1,18 @@
 from fastapi import APIRouter
+from database.mongo import results_col
 
 router = APIRouter()
 
-DUMMY_CANDIDATES = [
-  { 'id': 1, 'name': 'John Doe', 'overallScore': 88, 'timeTaken': 25, 'integrity': 95 },
-  { 'id': 2, 'name': 'Jane Smith', 'overallScore': 92, 'timeTaken': 22, 'integrity': 98 },
-  { 'id': 3, 'name': 'Peter Jones', 'overallScore': 85, 'timeTaken': 28, 'integrity': 90 },
-  { 'id': 4, 'name': 'Mary Johnson', 'overallScore': 95, 'timeTaken': 20, 'integrity': 99 },
-]
-
 @router.get("/leaderboard")
 async def get_leaderboard():
-    return DUMMY_CANDIDATES
+    docs = results_col.find().sort("overallScore", -1).limit(10)
+    candidates = []
+    for doc in docs:
+        candidates.append({
+            "id": str(doc["_id"]),
+            "name": doc.get("name", "Unknown"),
+            "overallScore": doc.get("overallScore", 0),
+            "timeTaken": doc.get("timeTaken", 0),
+            "integrity": doc.get("integrity", 0),
+        })
+    return candidates

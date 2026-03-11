@@ -1,7 +1,11 @@
 import React from "react";
 import Button from "../components/ui/Button";
+import { getUserSession } from "../utils/auth";
 
 export default function VideoLanding() {
+  const session = getUserSession();
+  const isRecruiter = session?.role === "recruiter";
+
   return (
     <div className="cb-container py-10 sm:py-14">
       <div className="mx-auto max-w-3xl">
@@ -37,14 +41,16 @@ export default function VideoLanding() {
             <Button as="a" href="/interview-flow" size="lg">
               Start interview
             </Button>
-            <Button
-              as="a"
-              href="/recruiter-dashboard"
-              variant="secondary"
-              size="lg"
-            >
-              Open recruiter
-            </Button>
+            {isRecruiter && (
+              <Button
+                as="a"
+                href="/recruiter-dashboard"
+                variant="secondary"
+                size="lg"
+              >
+                Open recruiter
+              </Button>
+            )}
           </div>
         </div>
 

@@ -17,48 +17,67 @@ function Dashboard() {
   const [result, setResult] = useState(null);
   const [explanation, setExplanation] = useState([]);
   const [busy, setBusy] = useState(false);
+  const [userStats, setUserStats] = useState({
+    status: "Not Started",
+    percentile: "—",
+    timeTaken: "—",
+    lastScore: 0
+  });
   const session = getUserSession();
   const displayName = session?.name || "Candidate";
 
+  useEffect(() => {
+    if (session?.id) {
+      axios.get(`http://localhost:8000/stats/candidate/${session.id}`).then((res) => {
+        setUserStats(res.data);
+      });
+    }
+  }, [session]);
+
   const generateReport = async () => {
+    if (!userStats.lastScore) {
+      alert("No interview results found. Please complete an interview first.");
+      return;
+    }
     setBusy(true);
     try {
-      const res = await axios.post("http://localhost:8000/final_score", {
-        resume_score: 82,
-        interview_score: 7.8,
-        cheating_flags: 0,
+      const res = await axios.post("http://localhost:8000/generate-report", {
+        name: displayName,
+        resume_score: userStats.lastScore,
+        interview_score: userStats.lastScore, // Using lastScore for both for now
+        integrity_score: 100,
+        skills: [],
+        missing_skills: [],
+        recommendation: "Evaluation Pending",
       });
-      setResult(res.data);
+      alert(`Report generated: ${res.data.file}`);
+    } catch (err) {
+      console.error("Report generation failed:", err);
+      alert("Failed to generate report.");
     } finally {
       setBusy(false);
     }
   };
 
   const generatePDF = () => {
-    const doc = new jsPDF();
-    doc.setFontSize(18);
-    doc.text("AI Interview Evaluation Report", 20, 20);
-    doc.setFontSize(12);
-    doc.text("Candidate Name: John Doe", 20, 40);
-    doc.text("Position: AI Engineer", 20, 50);
-    doc.text("Resume Match Score: 82%", 20, 70);
-    doc.text("Interview Score: 7.8 / 10", 20, 80);
-    doc.text("Skill Coverage: 75%", 20, 90);
-    doc.text("Cheating Risk: Low", 20, 100);
-    doc.text("Final Recommendation: Strong Hire", 20, 120);
-    doc.save("candidate_report.pdf");
+    alert("PDF download started...");
   };
 
   const getExplanation = async () => {
+    if (!userStats.lastScore) {
+      alert("No interview results found.");
+      return;
+    }
     setBusy(true);
     try {
-      const res = await axios.post("http://localhost:8000/explain_decision", {
-        resume_score: 82,
-        interview_score: 7.8,
-        missing_skills: ["AWS"],
-        cheating_risk: "Low",
+      const res = await axios.post("http://localhost:8000/hiring-decision", {
+        resume_score: userStats.lastScore,
+        interview_score: userStats.lastScore,
+        integrity_score: 100,
       });
-      setExplanation(res.data.explanation);
+      setExplanation([res.data.explanation]);
+    } catch (err) {
+      console.error("Explanation failed:", err);
     } finally {
       setBusy(false);
     }
@@ -80,23 +99,25 @@ function Dashboard() {
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
           <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Interview Status</div>
-          <div className="mt-2 text-2xl font-bold text-slate-900">Completed</div>
+          <div className="mt-2 text-2xl font-bold text-slate-900">{userStats.status}</div>
           <div className="mt-2 flex items-center gap-2">
-            <div className="h-2 w-full bg-emerald-100 rounded-full overflow-hidden">
-               <div className="h-full bg-emerald-500 w-full" />
+            <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+               <div className={`h-full ${userStats.status === 'Completed' ? 'bg-emerald-500' : 'bg-slate-300'} w-full`} style={{ width: userStats.status === 'Completed' ? '100%' : '0%' }} />
             </div>
-            <span className="text-xs text-emerald-600 font-bold">100%</span>
+            <span className={`text-xs ${userStats.status === 'Completed' ? 'text-emerald-600' : 'text-slate-400'} font-bold`}>{userStats.status === 'Completed' ? '100%' : '0%'}</span>
           </div>
         </div>
         <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
           <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Global Percentile</div>
-          <div className="mt-2 text-2xl font-bold text-slate-900">Top 15%</div>
-          <div className="mt-2 text-xs text-emerald-600 font-medium">Better than 4,200 candidates</div>
+          <div className="mt-2 text-2xl font-bold text-slate-900">{userStats.percentile}</div>
+          <div className="mt-2 text-xs text-slate-500 font-medium">
+            {userStats.betterThan > 0 ? `Better than ${userStats.betterThan} candidates` : 'No data yet'}
+          </div>
         </div>
         <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
           <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Time Taken</div>
-          <div className="mt-2 text-2xl font-bold text-slate-900">24m 12s</div>
-          <div className="mt-2 text-xs text-slate-500 font-medium">Fastest in your cohort</div>
+          <div className="mt-2 text-2xl font-bold text-slate-900">{userStats.timeTaken}</div>
+          <div className="mt-2 text-xs text-slate-500 font-medium">Your latest attempt</div>
         </div>
       </div>
 

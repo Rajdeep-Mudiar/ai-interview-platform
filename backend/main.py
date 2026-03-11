@@ -23,6 +23,7 @@ from routes.report import router as report_router
 from routes.hiring_decision import router as decision_router
 from routes.auth import router as auth_router
 from routes.jobs import router as jobs_router
+from routes.stats import router as stats_router
 
 app = FastAPI()
 app.include_router(ranking_router)
@@ -33,6 +34,7 @@ app.include_router(report_router)
 app.include_router(decision_router)
 app.include_router(auth_router)
 app.include_router(jobs_router)
+app.include_router(stats_router)
 app.include_router(leaderboard_router)
 
 app.add_middleware(
@@ -162,5 +164,6 @@ def emotion(data: dict):
 
 @app.post("/interview")
 async def save_interview(interview: Interview):
-    db.interviews.insert_one(interview.dict())
+    from database.mongo import results_col
+    results_col.insert_one(interview.dict())
     return {"message": "Interview saved successfully"}
