@@ -1,21 +1,16 @@
-opencv-python>=4.5.0
-mediapipe>=0.10.0
-ultralytics>=8.0.0
-requests>=2.25.0
-openai-whisper>=2023.10.02
-pyaudio>=0.2.11
-wave
-numpy>=1.21.0
+# Web framework
 fastapi>=0.95.0
 uvicorn>=0.22.0
 
-# AI/ML and PDF Parsing
-scikit-learn>=1.0.0
-pdfplumber>=0.5.0
+# Computer vision & ML
+opencv-python>=4.5.0
+mediapipe>=0.10.0
+ultralytics>=8.0.0
+numpy>=1.21.0
 
-# Utility
-python-dotenv>=1.0.0
+# Voice detection
+openai-whisper>=2023.10.02
+pyaudio>=0.2.11
 
-# Logging and threading are standard, but add for completeness
-logging
-threading
+# HTTP
+requests>=2.25.0

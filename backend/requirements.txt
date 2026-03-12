@@ -1,15 +1,28 @@
+# Web framework
 fastapi
 uvicorn
-scikit-learn
-spacy
-pdfplumber
-sentence-transformers
-reportlab
 pydantic[email]
 email-validator
+python-multipart
+
+# Database
 pymongo
 dnspython
 certifi
 python-dotenv
+
+# Auth
 bcrypt
+
+# NLP & ML
+scikit-learn
+spacy
+sentence-transformers
+
+# PDF & Resume parsing
+pdfplumber
+reportlab
+
+# Data
+pandas
 
