@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { getUserSession } from "../utils/auth";
 import Button from "../components/ui/Button";
@@ -37,7 +37,7 @@ function InterviewFlow() {
         // Use resume parser
         const formData = new FormData();
         formData.append("file", targetFile);
-        
+
         if (jd.trim()) {
           const res = await axios.post(`${API_BASE}/analyze-resume`, formData, {
             headers: { "Content-Type": "multipart/form-data" },
@@ -169,10 +169,12 @@ function InterviewFlow() {
                         }
                       }}
                     />
-                    <Button 
-                      variant="secondary" 
+                    <Button
+                      variant="secondary"
                       size="sm"
-                      onClick={() => document.getElementById('resumeFile').click()}
+                      onClick={() =>
+                        document.getElementById("resumeFile").click()
+                      }
                     >
                       Choose File
                     </Button>
@@ -183,23 +185,31 @@ function InterviewFlow() {
                       directory="true"
                       className="hidden"
                       onChange={(e) => {
-                        const selectedFiles = Array.from(e.target.files || []).filter(f => f.name.endsWith('.pdf'));
+                        const selectedFiles = Array.from(
+                          e.target.files || [],
+                        ).filter((f) => f.name.endsWith(".pdf"));
                         if (selectedFiles.length > 0) {
                           setFiles(selectedFiles);
                           setFile(null);
                         }
                       }}
                     />
-                    <Button 
-                      variant="secondary" 
+                    <Button
+                      variant="secondary"
                       size="sm"
-                      onClick={() => document.getElementById('resumeFolder').click()}
+                      onClick={() =>
+                        document.getElementById("resumeFolder").click()
+                      }
                     >
                       Upload Folder
                     </Button>
                   </div>
                   <div className="text-[11px] text-slate-500">
-                    {file ? `File: ${file.name}` : files.length > 0 ? `${files.length} PDF(s) found in folder` : "No files selected"}
+                    {file
+                      ? `File: ${file.name}`
+                      : files.length > 0
+                        ? `${files.length} PDF(s) found in folder`
+                        : "No files selected"}
                   </div>
                 </div>
                 <div className="pt-2">
@@ -251,7 +261,9 @@ function InterviewFlow() {
               <Button
                 onClick={saveInterview}
                 variant="secondary"
-                disabled={!match || !questions.length || !suggestions.length || busy}
+                disabled={
+                  !match || !questions.length || !suggestions.length || busy
+                }
               >
                 Save interview
               </Button>
@@ -262,18 +274,27 @@ function InterviewFlow() {
         <div className="grid gap-6 lg:col-span-5">
           <Card>
             <CardHeader className="pb-4">
-              <div className="text-sm font-semibold text-slate-900">1. Resume Parser</div>
-              <div className="text-sm text-slate-600">Extracted skills from your resume.</div>
+              <div className="text-sm font-semibold text-slate-900">
+                1. Resume Parser
+              </div>
+              <div className="text-sm text-slate-600">
+                Extracted skills from your resume.
+              </div>
             </CardHeader>
             <CardBody>
               {parsedSkills ? (
                 <div className="grid gap-3">
                   {Object.entries(parsedSkills).map(([category, skills]) => (
                     <div key={category} className="space-y-1">
-                      <div className="text-[10px] uppercase font-bold text-slate-400">{category}</div>
+                      <div className="text-[10px] uppercase font-bold text-slate-400">
+                        {category}
+                      </div>
                       <div className="flex flex-wrap gap-1">
-                        {skills.map(skill => (
-                          <span key={skill} className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px] border border-blue-100">
+                        {skills.map((skill) => (
+                          <span
+                            key={skill}
+                            className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px] border border-blue-100"
+                          >
                             {skill}
                           </span>
                         ))}
@@ -291,37 +312,52 @@ function InterviewFlow() {
 
           <Card>
             <CardHeader className="pb-4">
-              <div className="text-sm font-semibold text-slate-900">2. Job Match</div>
-              <div className="text-sm text-slate-600">Best fits for your profile.</div>
+              <div className="text-sm font-semibold text-slate-900">
+                2. Job Match
+              </div>
+              <div className="text-sm text-slate-600">
+                Best fits for your profile.
+              </div>
             </CardHeader>
             <CardBody>
               {matches.length > 0 ? (
                 <div className="grid gap-3 max-h-[400px] overflow-y-auto pr-1">
                   {matches.map((job) => (
-                    <div key={job.job_id} className="rounded-xl bg-white p-3 ring-1 ring-slate-200 hover:ring-blue-300 transition-all shadow-sm border-l-4 border-l-blue-500">
+                    <div
+                      key={job.job_id}
+                      className="rounded-xl bg-white p-3 ring-1 ring-slate-200 hover:ring-blue-300 transition-all shadow-sm border-l-4 border-l-blue-500"
+                    >
                       <div className="flex justify-between items-start mb-1">
                         <div>
-                          <h4 className="text-sm font-bold text-slate-900">{job.title}</h4>
-                          <p className="text-[10px] text-slate-500">{job.company}</p>
+                          <h4 className="text-sm font-bold text-slate-900">
+                            {job.title}
+                          </h4>
+                          <p className="text-[10px] text-slate-500">
+                            {job.company}
+                          </p>
                         </div>
-                        <span className={`text-xs font-bold ${job.score > 70 ? 'text-emerald-600' : job.score > 40 ? 'text-amber-600' : 'text-slate-600'}`}>
+                        <span
+                          className={`text-xs font-bold ${job.score > 70 ? "text-emerald-600" : job.score > 40 ? "text-amber-600" : "text-slate-600"}`}
+                        >
                           {job.score}% Match
                         </span>
                       </div>
-                      <p className="text-[10px] text-slate-600 line-clamp-2 mb-2">{job.description_preview}</p>
-                      <Button 
-                        size="sm" 
+                      <p className="text-[10px] text-slate-600 line-clamp-2 mb-2">
+                        {job.description_preview}
+                      </p>
+                      <Button
+                        size="sm"
                         className="w-full text-[10px] py-1 h-7"
                         onClick={() => {
-                          navigate("/interview", { 
-                            state: { 
+                          navigate("/interview", {
+                            state: {
                               skills: job.matched_skills || [],
                               missing_skills: job.missing_skills || [],
                               jobQuestions: job.questions || [],
                               resume_score: job.score,
                               jobTitle: job.title,
-                              job_id: job.job_id
-                            } 
+                              job_id: job.job_id,
+                            },
                           });
                         }}
                       >
@@ -346,8 +382,13 @@ function InterviewFlow() {
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {match.missing_skills?.length
-                        ? match.missing_skills.map(s => (
-                            <span key={s} className="px-2 py-0.5 bg-rose-50 text-rose-600 rounded text-[10px] border border-rose-100">{s}</span>
+                        ? match.missing_skills.map((s) => (
+                            <span
+                              key={s}
+                              className="px-2 py-0.5 bg-rose-50 text-rose-600 rounded text-[10px] border border-rose-100"
+                            >
+                              {s}
+                            </span>
                           ))
                         : "None detected."}
                     </div>

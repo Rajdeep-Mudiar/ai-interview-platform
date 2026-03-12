@@ -1,3 +1,6 @@
+import logging
+logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
+
 from fastapi import FastAPI, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from resume_parser.parser import parse_resume
@@ -23,6 +26,7 @@ from routes.hiring_decision import router as decision_router
 from routes.auth import router as auth_router
 from routes.jobs import router as jobs_router
 from routes.stats import router as stats_router
+from routes.export import router as export_router
 
 app = FastAPI()
 
@@ -44,6 +48,7 @@ app.include_router(auth_router)
 app.include_router(jobs_router)
 app.include_router(stats_router)
 app.include_router(leaderboard_router)
+app.include_router(export_router)
 
 from typing import List, Dict, Any
 from datetime import datetime

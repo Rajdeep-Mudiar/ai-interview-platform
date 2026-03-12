@@ -17,6 +17,8 @@ async def get_leaderboard():
             "overall_score": doc.get("overall_score", 0),
             "integrity_score": doc.get("integrity_score", 0),
             "proctoring_score": doc.get("proctoring_score", 100.0),
+            "proctoring_alerts": doc.get("proctoring_alerts", []),
+            "recommendation": doc.get("recommendation", "N/A"),
             "report_file": doc.get("report_file"),
             "created_at": doc.get("created_at")
         })

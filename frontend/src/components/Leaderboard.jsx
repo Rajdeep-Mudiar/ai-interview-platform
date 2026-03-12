@@ -1,7 +1,7 @@
 import React from "react";
 import { Card, CardBody, CardHeader } from "./ui/Card";
 
-export default function Leaderboard({ candidates = [] }) {
+export default function Leaderboard({ candidates = [], onSelectCandidate }) {
   return (
     <Card>
       <CardHeader className="pb-4">
@@ -11,7 +11,7 @@ export default function Leaderboard({ candidates = [] }) {
               Top Performers
             </div>
             <div className="text-sm text-slate-600">
-              Highest scoring candidates in the platform.
+              Click on a candidate to view proctoring alerts.
             </div>
           </div>
           <div className="rounded-full bg-blue-50 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-blue-700 ring-1 ring-blue-200">
@@ -35,7 +35,11 @@ export default function Leaderboard({ candidates = [] }) {
             <tbody className="divide-y divide-slate-100">
               {candidates.length > 0 ? (
                 candidates.map((candidate, index) => (
-                  <tr key={candidate.id} className="hover:bg-slate-50/50 transition-colors">
+                  <tr 
+                    key={candidate.id} 
+                    className="hover:bg-slate-50/50 transition-colors cursor-pointer group"
+                    onClick={() => onSelectCandidate && onSelectCandidate(candidate)}
+                  >
                     <td className="px-6 py-4 border-b border-slate-100">
                       <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold ${
                         index === 0 ? "bg-amber-100 text-amber-700 ring-1 ring-amber-200" :
@@ -47,7 +51,7 @@ export default function Leaderboard({ candidates = [] }) {
                       </span>
                     </td>
                     <td className="px-6 py-4 border-b border-slate-100">
-                      <div className="font-medium text-slate-900">{candidate.name}</div>
+                      <div className="font-medium text-slate-900 group-hover:text-blue-600 transition-colors">{candidate.name}</div>
                       <div className="text-[10px] text-slate-500 uppercase tracking-tighter">{candidate.job_title}</div>
                     </td>
                     <td className="px-6 py-4 border-b border-slate-100 text-center">

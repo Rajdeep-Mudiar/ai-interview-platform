@@ -1,8 +1,10 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import Button from "../components/ui/Button";
 import { getUserSession } from "../utils/auth";
 
 export default function VideoLanding() {
+  const navigate = useNavigate();
   const session = getUserSession();
   const isRecruiter = session?.role === "recruiter";
 
@@ -38,25 +40,21 @@ export default function VideoLanding() {
           <div className="cb-videoBlendOverlay" />
 
           <div className="absolute bottom-5 left-5 flex flex-col gap-3 sm:flex-row">
-            <Button as="a" href="/interview-flow" size="lg">
+            <Button size="lg" onClick={() => navigate("/interview-flow")}>
               Start interview
             </Button>
             {isRecruiter && (
               <Button
-                as="a"
-                href="/recruiter-dashboard"
                 variant="secondary"
                 size="lg"
+                onClick={() => navigate("/recruiter-dashboard")}
               >
                 Open recruiter
               </Button>
             )}
           </div>
         </div>
-
-      
       </div>
     </div>
   );
 }
-

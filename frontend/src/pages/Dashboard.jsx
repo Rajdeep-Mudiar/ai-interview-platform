@@ -10,6 +10,7 @@ function Dashboard() {
   const [result, setResult] = useState(null);
   const [explanation, setExplanation] = useState([]);
   const [history, setHistory] = useState([]);
+  const [jobs, setJobs] = useState([]);
   const [busy, setBusy] = useState(false);
   const [userStats, setUserStats] = useState({
     status: "Not Started",
@@ -25,6 +26,10 @@ function Dashboard() {
   useEffect(() => {
     axios.get(`${API_BASE}/leaderboard`).then((res) => {
       setCandidates(res.data);
+    });
+    // Fetch all jobs
+    axios.get(`${API_BASE}/jobs`).then((res) => {
+      setJobs(res.data);
     });
   }, []);
 
@@ -174,6 +179,62 @@ function Dashboard() {
 
       <div className="mt-8">
         <Leaderboard candidates={candidates} />
+      </div>
+
+      <div className="mt-8">
+        <h2 className="text-xl font-semibold text-slate-900 mb-4">Recommended Jobs</h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {jobs.length > 0 ? (
+            jobs.map((job) => {
+              // Simple matching logic: check if any of the candidate's matched skills are in the job title or description
+              // In a real app, this would be a backend match score
+              const latestHistory = history[0];
+              const matchedSkills = latestHistory?.matched_skills || [];
+              const isRecommended = matchedSkills.some(skill => 
+                job.title.toLowerCase().includes(skill.toLowerCase()) || 
+                job.description.toLowerCase().includes(skill.toLowerCase())
+              );
+
+              return (
+                <Card key={job.id} className={`hover:ring-blue-300 transition-all ${isRecommended ? 'ring-2 ring-emerald-500 shadow-md' : ''}`}>
+                  <CardBody className="p-5 flex flex-col h-full">
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className="font-bold text-slate-900">{job.title}</h3>
+                      {isRecommended && (
+                        <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded text-[10px] font-bold uppercase">
+                          Skill Match
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-600 line-clamp-3 mb-4 flex-grow">
+                      {job.description}
+                    </p>
+                    <div className="mt-auto pt-4 flex gap-2">
+                      <Button 
+                        className="flex-1 text-xs py-2" 
+                        size="sm"
+                        onClick={() => navigate("/interview", { 
+                          state: { 
+                            jobId: job.id, 
+                            jobTitle: job.title,
+                            jobQuestions: job.questions,
+                            skills: matchedSkills
+                          } 
+                        })}
+                      >
+                        Start Interview
+                      </Button>
+                    </div>
+                  </CardBody>
+                </Card>
+              );
+            })
+          ) : (
+            <div className="col-span-full rounded-xl bg-slate-50 p-8 text-center text-sm text-slate-600 ring-1 ring-slate-200">
+              No open job positions found at the moment.
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="mt-8">

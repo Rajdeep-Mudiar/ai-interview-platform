@@ -1,10 +1,21 @@
-opencv-python
-mediapipe
-ultralytics
-requests
-openai-whisper
-pyaudio
+opencv-python>=4.5.0
+mediapipe>=0.10.0
+ultralytics>=8.0.0
+requests>=2.25.0
+openai-whisper>=2023.10.02
+pyaudio>=0.2.11
 wave
-numpy
-fastapi
-uvicorn
+numpy>=1.21.0
+fastapi>=0.95.0
+uvicorn>=0.22.0
+
+# AI/ML and PDF Parsing
+scikit-learn>=1.0.0
+pdfplumber>=0.5.0
+
+# Utility
+python-dotenv>=1.0.0
+
+# Logging and threading are standard, but add for completeness
+logging
+threading

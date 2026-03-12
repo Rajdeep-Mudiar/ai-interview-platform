@@ -35,6 +35,8 @@ function Interview(props) {
   const [backendResult, setBackendResult] = useState(null);
   const [isInterviewStarted, setIsInterviewStarted] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const noFaceCountRef = useRef(0);
+  const NO_FACE_THRESHOLD = 3; // Number of consecutive frames to trigger alert
 
   const API_BASE = "http://127.0.0.1:8000";
   const AI_SERVICE_BASE = "http://127.0.0.1:8001";
@@ -232,29 +234,48 @@ function Interview(props) {
 
     async function detect() {
       if (!videoRef.current || videoRef.current.readyState !== 4) return;
-      // Multiple faces
+      
+      // 1. Detection with a higher confidence threshold for initial scan
       const detections = await faceapi.detectAllFaces(
         videoRef.current,
-        new faceapi.TinyFaceDetectorOptions(),
+        new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.3 })
       );
+
+      // Handle Multiple Faces (Priority 1)
       if (detections.length > 1) {
+        noFaceCountRef.current = 0;
         setLocalAlert("multiple persons detected");
         setIntegrity((prev) => Math.max(prev - 15, 0));
         return;
       }
-      // No face
+
+      // Handle No Face (Priority 2) with persistence and dynamic fallback
       if (detections.length === 0) {
-        if (isInterviewStarted && !interviewFinished) {
-          setLocalAlert("No face detected");
-          setIntegrity((prev) => Math.max(prev - 5, 0));
+        // Try a more sensitive scan if the first one fails
+        const retryDetections = await faceapi.detectAllFaces(
+          videoRef.current,
+          new faceapi.TinyFaceDetectorOptions({ inputSize: 128, scoreThreshold: 0.15 })
+        );
+        
+        if (retryDetections.length === 0) {
+          noFaceCountRef.current += 1;
+          if (noFaceCountRef.current >= NO_FACE_THRESHOLD) {
+            if (isInterviewStarted && !interviewFinished) {
+              setLocalAlert("No face detected");
+              setIntegrity((prev) => Math.max(prev - 5, 0));
+            }
+          }
+          return;
         }
-        return;
       }
-      // Looking away & emotion detection
+      
+      noFaceCountRef.current = 0; // Reset counter if face is found (either primary or retry)
+
+      // 2. Detailed Single Face Analysis
       const detection = await faceapi
         .detectSingleFace(
           videoRef.current,
-          new faceapi.TinyFaceDetectorOptions(),
+          new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.3 })
         )
         .withFaceLandmarks()
         .withFaceExpressions();
@@ -702,7 +723,7 @@ function Interview(props) {
                           </div>
                           <div className="text-right">
                             <div className={`text-lg font-bold ${
-                              backendResult.recommendation === 'Strong Hire' ? 'text-emerald-400' : 
+                              backendResult.recommendation === 'ACCEPTED' ? 'text-emerald-400' : 
                               backendResult.recommendation === 'Consider' ? 'text-yellow-400' : 'text-rose-400'
                             }`}>
                               {backendResult.recommendation}

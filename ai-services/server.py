@@ -9,9 +9,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from proctor_engine import ProctorEngine
 from voice_detection import VoiceProctor
 
-# Configure logging
+# Configure logging (set to WARNING to reduce console logs)
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.WARNING,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(sys.stdout),
@@ -19,6 +19,8 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger("AI-Server")
+
+# To increase log detail, set level=logging.INFO or level=logging.DEBUG
 
 app = FastAPI(title="CareBridge AI Proctoring Controller")
 
@@ -111,11 +113,12 @@ def stop_proctoring():
 if __name__ == "__main__":
     # Needed for Windows multiprocessing support
     multiprocessing.freeze_support()
-    
+
     logger.info("="*50)
     logger.info("CareBridge AI Proctoring Controller Server Starting")
     logger.info("Running on http://127.0.0.1:8001")
+    logger.info("Waiting for interview to start via POST /start...")
     logger.info("="*50)
-    
-    # Start the control server on port 8001
-    uvicorn.run(app, host="127.0.0.1", port=8001)
+
+    # Start the control server on port 8001 (proctoring starts only when /start is called)
+    uvicorn.run(app, host="127.0.0.1", port=8001, log_level="warning")

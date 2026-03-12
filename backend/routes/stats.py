@@ -31,11 +31,12 @@ async def get_candidate_stats(user_id: str):
         }
     
     latest = user_results[0]
+    latest_score = latest.get("overallScore") or latest.get("overall_score", 0)
     
     # Calculate percentile (mock logic for now or simple count)
-    all_scores = [r["overallScore"] for r in results_col.find({}, {"overallScore": 1})]
+    all_scores = [r.get("overallScore", 0) for r in results_col.find({}, {"overallScore": 1}) if r.get("overallScore") is not None]
     all_scores.sort()
-    count_below = sum(1 for s in all_scores if s < latest["overallScore"])
+    count_below = sum(1 for s in all_scores if s < latest_score)
     percentile = round((count_below / len(all_scores)) * 100) if all_scores else 0
     
     return {
