@@ -5,16 +5,22 @@ import spacy
 
 nlp = spacy.load("en_core_web_sm")
 
-SKILLS = [
-    "python","java","react","node","sql",
-    "machine learning","docker","aws","javascript"
-]
+SKILLS_CONFIG = {
+    "skills": [
+        "python", "java", "react", "node", "sql",
+        "machine learning", "docker", "aws", "javascript"
+    ]
+}
 
 def extract_text_from_pdf(file):
     text = ""
-    with pdfplumber.open(file) as pdf:
-        for page in pdf.pages:
-            text += page.extract_text()
+    try:
+        with pdfplumber.open(file) as pdf:
+            for page in pdf.pages:
+                text += page.extract_text()
+    except Exception as e:
+        print(f"Error extracting text from PDF: {e}")
+        return ""
     return text
 
 def calculate_match_score(resume_text, job_description):
@@ -28,7 +34,7 @@ def calculate_match_score(resume_text, job_description):
 def extract_skills(text):
     text = text.lower()
     found = []
-    for skill in SKILLS:
+    for skill in SKILLS_CONFIG["skills"]:
         if skill in text:
             found.append(skill)
     return found

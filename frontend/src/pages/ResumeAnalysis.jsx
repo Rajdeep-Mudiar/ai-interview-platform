@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import Button from "../components/ui/Button";
@@ -11,9 +11,17 @@ export default function ResumeAnalysis() {
   const [jd, setJd] = useState("");
   const [result, setResult] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [jobs, setJobs] = useState([]);
 
-  // If navigated from Jobs page with ?jobId=..., fetch job and prefill JD.
   useEffect(() => {
+    async function loadJobs() {
+      try {
+        const res = await axios.get(`http://localhost:8000/jobs`);
+        setJobs(res.data);
+      } catch {}
+    }
+    loadJobs();
+
     const params = new URLSearchParams(window.location.search);
     const jobId = params.get("jobId");
     if (!jobId) return;
@@ -23,29 +31,22 @@ export default function ResumeAnalysis() {
         if (!res.ok) return;
         const job = await res.json();
         setJd(job.description || "");
-      } catch {
-        // ignore
-      }
+      } catch {}
     }
     loadJob();
   }, []);
 
-  async function analyze() {
-    if (!file || !jd.trim()) return;
+  async function analyze(jobDescription) {
+    if (!file) return;
     setBusy(true);
     try {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("job_description", jd);
+      formData.append("job_description", jobDescription);
       const res = await axios.post("http://localhost:8000/analyze-resume", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+        headers: { "Content-Type": "multipart/form-data" },
       });
       setResult(res.data);
-      
-      // Instead of navigating immediately, we show results here.
-      // If the user wants to start an interview, they can click a button below.
     } catch (err) {
       console.error("Analysis failed:", err);
     } finally {
@@ -55,119 +56,76 @@ export default function ResumeAnalysis() {
 
   return (
     <div className="cb-container py-10 sm:py-14">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
-            Resume analysis
-          </h1>
-          <p className="mt-1 text-sm text-slate-600">
-            Upload a resume and paste a job description to compute fit and gaps.
-          </p>
-        </div>
+      <div className="mx-auto max-w-3xl text-center">
+        <h1 className="text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
+          Resume Analyzer
+        </h1>
+        <p className="mt-2 text-base text-slate-600">
+          Upload your resume, select a job, and get an instant match analysis.
+        </p>
       </div>
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-12">
-        <Card className="lg:col-span-7">
-          <CardHeader className="pb-4">
-            <div className="text-sm font-semibold text-slate-900">Inputs</div>
-            <div className="text-sm text-slate-600">
-              Resume file and job description.
+      <div className="mt-10 grid grid-cols-1 gap-8 lg:grid-cols-12">
+        {/* Left Column: Inputs */}
+        <div className="lg:col-span-4">
+          <Card className="p-6">
+            <h3 className="text-lg font-semibold text-slate-900">Your Resume</h3>
+            <div className="mt-4 space-y-2">
+              <Label htmlFor="resumeFile">Upload your resume file</Label>
+              <Input id="resumeFile" type="file" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+              {file && <p className="text-xs text-slate-500">Selected: {file.name}</p>}
             </div>
-          </CardHeader>
-          <CardBody className="grid gap-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="resumeFile">Resume file</Label>
-                <Input
-                  id="resumeFile"
-                  type="file"
-                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="jd">Job description</Label>
-                <Textarea
-                  id="jd"
-                  placeholder="Paste job description…"
-                  value={jd}
-                  onChange={(e) => setJd(e.target.value)}
-                  className="min-h-28"
-                />
-              </div>
-            </div>
+          </Card>
+        </div>
 
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="text-sm text-slate-600">
-                {file ? (
-                  <>
-                    Selected:{" "}
-                    <span className="font-medium text-slate-900">{file.name}</span>
-                  </>
-                ) : (
-                  "No resume file selected."
-                )}
-              </div>
-              <Button onClick={analyze} disabled={!file || !jd.trim() || busy}>
-                {busy ? "Analyzing..." : "Analyze"}
-              </Button>
+        {/* Middle Column: Job Listings */}
+        <div className="lg:col-span-4">
+          <Card className="p-6">
+            <h3 className="text-lg font-semibold text-slate-900">Available Jobs</h3>
+            <div className="mt-4 space-y-3 h-96 overflow-y-auto pr-2">
+              {jobs.map((job) => (
+                <div key={job.id} className="p-4 rounded-lg border border-slate-200 bg-white">
+                  <h4 className="font-semibold text-sm text-slate-800">{job.title}</h4>
+                  <p className="text-xs text-slate-500 mt-1 line-clamp-2">{job.description}</p>
+                  <Button onClick={() => analyze(job.description)} disabled={!file || busy} size="sm" className="mt-3 w-full">
+                    {busy ? "Analyzing..." : "Analyze Match"}
+                  </Button>
+                </div>
+              ))}
             </div>
-          </CardBody>
-        </Card>
+          </Card>
+        </div>
 
-        <Card className="lg:col-span-5">
-          <CardHeader className="pb-4">
-            <div className="text-sm font-semibold text-slate-900">Results</div>
-            <div className="text-sm text-slate-600">
-              Match score, extracted skills, and missing skills.
-            </div>
-          </CardHeader>
-          <CardBody>
+        {/* Right Column: Results */}
+        <div className="lg:col-span-4">
+          <Card className="p-6 sticky top-24">
+            <h3 className="text-lg font-semibold text-slate-900">Analysis Results</h3>
             {result ? (
-              <div className="grid gap-4">
-                <div className="rounded-xl bg-slate-50 p-4 ring-1 ring-slate-200">
-                  <div className="text-xs font-medium text-slate-500">
-                    Match score
-                  </div>
-                  <div className="mt-1 text-2xl font-semibold text-slate-900">
-                    {result.score}%
-                  </div>
+              <div className="mt-4 space-y-4">
+                <div className="text-center">
+                  <p className="text-sm text-slate-500">Match Score</p>
+                  <p className="text-5xl font-bold text-indigo-600">{result.score}%</p>
                 </div>
-                <div className="rounded-xl bg-white p-4 ring-1 ring-slate-200">
-                  <div className="text-xs font-medium text-slate-500">
-                    Skills found
-                  </div>
-                  <div className="mt-1 text-sm text-slate-700">
-                    {result.resume_skills?.length
-                      ? result.resume_skills.join(", ")
-                      : "None detected."}
-                  </div>
+                <div>
+                  <h4 className="font-semibold text-sm text-slate-800">Skills Found</h4>
+                  <p className="text-xs text-slate-600 mt-1">{result.resume_skills?.join(", ") || "None"}</p>
                 </div>
-                <div className="rounded-xl bg-white p-4 ring-1 ring-slate-200">
-                  <div className="text-xs font-medium text-slate-500">
-                    Missing skills
-                  </div>
-                  <div className="mt-1 text-sm text-slate-700">
-                    {result.missing_skills?.length
-                      ? result.missing_skills.join(", ")
-                      : "None detected."}
-                  </div>
+                <div>
+                  <h4 className="font-semibold text-sm text-slate-800">Missing Skills</h4>
+                  <p className="text-xs text-slate-600 mt-1">{result.missing_skills?.join(", ") || "None"}</p>
                 </div>
-                <Button 
-                  onClick={() => navigate("/interview-flow", { state: { resume: result.resume_text || file?.name, jd: jd } })}
-                  className="mt-2"
-                >
-                  Go to Interview Pipeline
+                <Button onClick={() => navigate("/interview-flow")} className="w-full mt-4">
+                  Start Interview Pipeline
                 </Button>
               </div>
             ) : (
-              <div className="rounded-xl bg-slate-50 p-5 text-sm text-slate-600 ring-1 ring-slate-200">
-                Analyze a resume to see results here.
+              <div className="mt-4 text-center py-10 px-6 bg-slate-50 rounded-lg">
+                <p className="text-sm text-slate-500">Your analysis results will appear here.</p>
               </div>
             )}
-          </CardBody>
-        </Card>
+          </Card>
+        </div>
       </div>
     </div>
   );
 }
-

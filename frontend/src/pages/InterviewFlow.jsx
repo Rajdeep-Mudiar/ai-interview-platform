@@ -1,32 +1,54 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import axios from "axios";
+import axiosClient from "../utils/axiosClient";
 import { getUserSession } from "../utils/auth";
 import Button from "../components/ui/Button";
 import { Card, CardBody, CardHeader } from "../components/ui/Card";
-import { Label, Textarea } from "../components/ui/Form";
+import { Input, Label, Textarea } from "../components/ui/Form";
 
 function InterviewFlow() {
   const location = useLocation();
-  const [resume, setResume] = useState("");
+  const [resumeFile, setResumeFile] = useState(null);
+  const [resumeText, setResumeText] = useState("");
   const [jd, setJd] = useState("");
 
   useEffect(() => {
     if (location.state) {
-      setResume(location.state.resume || "");
       setJd(location.state.jd || "");
     }
   }, [location.state]);
+
   const [match, setMatch] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [suggestions, setSuggestions] = useState([]);
   const [busy, setBusy] = useState(false);
 
+  const handleFileChange = (e) => {
+    setResumeFile(e.target.files[0]);
+  };
+
+  const parseResume = async () => {
+    if (!resumeFile) return;
+    setBusy(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", resumeFile);
+      const res = await axiosClient.post("/parse_resume", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      setResumeText(res.data.text);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const analyzeResume = async () => {
     setBusy(true);
     try {
-      const res = await axios.post("http://localhost:8000/match_jd", {
-        resume: resume,
+      const res = await axiosClient.post("/match_jd", {
+        resume: resumeText,
         jd: jd,
       });
       setMatch(res.data);
@@ -39,10 +61,10 @@ function InterviewFlow() {
     if (!match) return;
     setBusy(true);
     try {
-      const res = await axios.post(
-        "http://localhost:8000/generate_ai_questions",
+      const res = await axiosClient.post(
+        "/generate_ai_questions",
         {
-          resume: resume,
+          resume: resumeText,
           jd: jd,
           missing_skills: match.missing_skills,
         },
@@ -57,9 +79,9 @@ function InterviewFlow() {
     if (!match) return;
     setBusy(true);
     try {
-      const res = await axios.post("http://localhost:8000/resume_suggestions", {
+      const res = await axiosClient.post("/resume_suggestions", {
         missing_skills: match.missing_skills,
-        resume: resume,
+        resume: resumeText,
       });
       setSuggestions(res.data.suggestions);
     } finally {
@@ -74,10 +96,10 @@ function InterviewFlow() {
 
     setBusy(true);
     try {
-      await axios.post("http://localhost:8000/interview", {
+      await axiosClient.post("/interview", {
         user_id: session.id,
         name: session.name,
-        resume: resume,
+        resume: resumeText,
         jd: jd,
         fit_score: match.fit_score,
         overallScore: match.fit_score, // Using fit_score as demo overallScore for now
@@ -104,7 +126,7 @@ function InterviewFlow() {
             AI interview pipeline
           </h1>
           <p className="mt-1 text-sm text-slate-600">
-            Paste a resume and job description to generate questions and
+            Upload a resume and paste a job description to generate questions and
             improvements.
           </p>
         </div>
@@ -115,19 +137,17 @@ function InterviewFlow() {
           <CardHeader className="pb-4">
             <div className="text-sm font-semibold text-slate-900">Inputs</div>
             <div className="text-sm text-slate-600">
-              Provide the resume text and job description.
+              Provide the resume file and job description.
             </div>
           </CardHeader>
           <CardBody className="grid gap-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Resume</Label>
-                <Textarea
-                  placeholder="Paste resume text…"
-                  value={resume}
-                  onChange={(e) => setResume(e.target.value)}
-                  className="min-h-44"
-                />
+                <Input type="file" onChange={handleFileChange} />
+                <Button onClick={parseResume} disabled={!resumeFile || busy}>
+                  {busy ? "Parsing..." : "Parse Resume"}
+                </Button>
               </div>
               <div className="space-y-2">
                 <Label>Job description</Label>
@@ -143,7 +163,7 @@ function InterviewFlow() {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <Button
                 onClick={analyzeResume}
-                disabled={!resume.trim() || !jd.trim() || busy}
+                disabled={!resumeText.trim() || !jd.trim() || busy}
               >
                 {busy ? "Analyzing..." : "Analyze resume"}
               </Button>

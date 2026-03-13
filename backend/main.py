@@ -24,6 +24,7 @@ from routes.hiring_decision import router as decision_router
 from routes.auth import router as auth_router
 from routes.jobs import router as jobs_router
 from routes.stats import router as stats_router
+from routes.monitoring import router as monitoring_router
 
 app = FastAPI()
 app.include_router(ranking_router)
@@ -36,6 +37,7 @@ app.include_router(auth_router)
 app.include_router(jobs_router)
 app.include_router(stats_router)
 app.include_router(leaderboard_router)
+app.include_router(monitoring_router)
 
 app.add_middleware(
 CORSMiddleware,
@@ -44,55 +46,11 @@ allow_methods=["*"],
 allow_headers=["*"],
 )
 
-alerts = []
-
-@app.post("/alert")
-def receive_alert(data: dict):
-
-    alerts.append(data)
-
-    return {"status":"received"}
-
-@app.get("/alerts")
-def get_alerts():
-
-    return alerts
-
-@app.post("/upload_resume")
-async def upload_resume(file: UploadFile):
-    file_path = f"resumes/{file.filename}"
-    with open(file_path,"wb") as buffer:
-        shutil.copyfileobj(file.file,buffer)
-    result = parse_resume(file_path)
-    return result
-
 @app.post("/match_jd")
 def match_jd(data: dict):
     resume_text = data["resume"]
     jd_text = data["jd"]
     result = analyze_candidate(resume_text, jd_text)
-    return result
-
-@app.post("/generate_questions")
-
-def generate(data:dict):
-
-    matched = data["matched_skills"]
-    missing = data["missing_skills"]
-
-    questions = generate_questions(missing,matched)
-
-    return {"questions":questions}
-
-@app.post("/evaluate_answer")
-
-def evaluate(data:dict):
-
-    answer = data["answer"]
-    question = data["question"]
-
-    result = analyze_answer(answer,question)
-
     return result
 
 @app.post("/final_score")

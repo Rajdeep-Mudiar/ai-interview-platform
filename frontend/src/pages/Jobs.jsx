@@ -65,7 +65,7 @@ export default function Jobs() {
 
             <Button
               as="a"
-              href={`/resume-analysis?jobId=${job.id}`}
+              href={`/interview?jobId=${job.id}`}
               size="sm"
             >
               Start interview

@@ -12,6 +12,7 @@ import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import ProtectedRoute from "./components/ProtectedRoute";
 import InterviewFlow from "./pages/InterviewFlow";
+import MobileMonitoring from "./pages/MobileMonitoring";
 
 import ResumeAnalysis from "./pages/ResumeAnalysis";
 import VideoLanding from "./pages/VideoLanding";
@@ -55,6 +56,7 @@ function App() {
                   <Route path="/report" element={<Report />} />
                   <Route path="/voice-interview" element={<VoiceInterview />} />
                   <Route path="/resume-analysis" element={<ResumeAnalysis />} />
+                  <Route path="/mobile-monitoring/:sessionId" element={<MobileMonitoring />} />
                 </Routes>
               </ProtectedRoute>
             }
