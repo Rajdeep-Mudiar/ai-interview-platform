@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import axiosClient from "../utils/axiosClient";
 import Button from "../components/ui/Button";
 import { Card, CardBody, CardHeader } from "../components/ui/Card";
 import { Input, Label, Textarea } from "../components/ui/Form";
@@ -16,7 +16,7 @@ export default function ResumeAnalysis() {
   useEffect(() => {
     async function loadJobs() {
       try {
-        const res = await axios.get(`http://localhost:8000/jobs`);
+        const res = await axiosClient.get("/jobs");
         setJobs(res.data);
       } catch {}
     }
@@ -27,10 +27,8 @@ export default function ResumeAnalysis() {
     if (!jobId) return;
     async function loadJob() {
       try {
-        const res = await fetch(`http://localhost:8000/jobs/${jobId}`);
-        if (!res.ok) return;
-        const job = await res.json();
-        setJd(job.description || "");
+        const res = await axiosClient.get(`/jobs/${jobId}`);
+        setJd(res.data.description || "");
       } catch {}
     }
     loadJob();
@@ -43,7 +41,7 @@ export default function ResumeAnalysis() {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("job_description", jobDescription);
-      const res = await axios.post("http://localhost:8000/analyze-resume", formData, {
+      const res = await axiosClient.post("/analyze-resume", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       setResult(res.data);

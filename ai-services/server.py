@@ -1,13 +1,16 @@
-import subprocess
 import multiprocessing
 import logging
 import sys
+import time
 import os
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from vision_proctor import VisionProctor
+from voice_proctor import VoiceProctor
+from yolo_detector import detector
 from pydantic import BaseModel
-from typing import Optional
+import base64
 
 # Configure logging
 logging.basicConfig(
@@ -15,7 +18,7 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(sys.stdout),
-        logging.FileHandler("ai_server.log")
+        logging.FileHandler("ai_services.log")
     ]
 )
 logger = logging.getLogger("AI-Server")
@@ -31,92 +34,98 @@ app.add_middleware(
 )
 
 # Global process holders
-vision_process: Optional[subprocess.Popen] = None
-voice_process: Optional[subprocess.Popen] = None
-active_user_id: Optional[str] = None
+vision_process = None
+voice_process = None
+active_user_id = None
 
-class StartRequest(BaseModel):
-    user_id: str
+def run_voice_proctor(user_id):
+    """Function to run the voice proctor in a separate process."""
+    try:
+        logger.info(f"Initializing Voice Proctor for user {user_id}...")
+        proctor = VoiceProctor(user_id=user_id)
+        proctor.run()
+    except Exception as e:
+        logger.error(f"Voice Proctor process failed: {e}")
+
+def run_visual_proctor(user_id):
+    """Function to run the visual proctor in a separate process."""
+    try:
+        logger.info(f"Initializing Visual Proctor for user {user_id} (OpenCV/MediaPipe)...")
+        proctor = VisionProctor(user_id=user_id)
+        proctor.run()
+    except Exception as e:
+        logger.error(f"Visual Proctor failed: {e}")
 
 @app.get("/status")
 def get_status():
-    """Check if the proctoring services are active."""
     return {
-        "vision_active": vision_process is not None and vision_process.poll() is None,
-        "voice_active": voice_process is not None and voice_process.poll() is None,
+        "vision_active": vision_process is not None and vision_process.is_alive(),
+        "voice_active": voice_process is not None and voice_process.is_alive(),
         "active_user_id": active_user_id
     }
 
 @app.post("/start")
-def start_proctoring(request: StartRequest):
-    """Launch vision and voice proctoring as background processes."""
+def start_proctoring(data: dict):
     global vision_process, voice_process, active_user_id
     
-    user_id = request.user_id
+    user_id = data.get("user_id", "unknown")
     
-    # Check if already running
-    if (vision_process and vision_process.poll() is None) or \
-       (voice_process and voice_process.poll() is None):
-        return {
-            "message": "Proctoring services are already running.",
-            "active_user_id": active_user_id
-        }
+    if (vision_process and vision_process.is_alive()) or (voice_process and voice_process.is_alive()):
+        return {"message": "Proctoring services are already running.", "active_user_id": active_user_id}
     
-    logger.info(f"[*] Starting AI Proctoring Services for user: {user_id}")
+    logger.info(f"Starting CareBridge AI Proctoring Services for user {user_id}...")
     active_user_id = user_id
     
-    python_executable = sys.executable
-    service_dir = os.path.dirname(os.path.abspath(__file__))
+    # 1. Start Voice Proctor in background
+    voice_process = multiprocessing.Process(target=run_voice_proctor, args=(user_id,), name="VoiceProctorProcess")
+    voice_process.daemon = True
+    voice_process.start()
     
-    # 1. Start Vision Proctor
-    try:
-        vision_process = subprocess.Popen(
-            [python_executable, "vision_proctor.py", user_id],
-            cwd=service_dir
-        )
-        logger.info("[+] Vision Proctor launched.")
-    except Exception as e:
-        logger.error(f"[-] Failed to launch Vision Proctor: {e}")
-        return {"message": f"Failed to launch Vision Proctor: {str(e)}"}
-        
-    # 2. Start Voice Proctor
-    try:
-        voice_process = subprocess.Popen(
-            [python_executable, "voice_proctor.py", user_id],
-            cwd=service_dir
-        )
-        logger.info("[+] Voice Proctor launched.")
-    except Exception as e:
-        logger.error(f"[-] Failed to launch Voice Proctor: {e}")
-        # Optionally terminate vision if voice fails
-        if vision_process: vision_process.terminate()
-        return {"message": f"Failed to launch Voice Proctor: {str(e)}"}
+    # 2. Start Visual Proctor in background (it will open its own window)
+    vision_process = multiprocessing.Process(target=run_visual_proctor, args=(user_id,), name="VisualProctorProcess")
+    vision_process.daemon = True
+    vision_process.start()
     
     logger.info("✅ All AI Proctoring services launched.")
-    return {
-        "message": "AI Proctoring services started successfully.",
-        "user_id": user_id
-    }
+    return {"message": "AI Proctoring services started successfully.", "user_id": user_id}
 
 @app.post("/stop")
 def stop_proctoring():
-    """Terminate the background proctoring processes."""
     global vision_process, voice_process, active_user_id
     
-    logger.info(f"[*] Shutting down AI Proctoring for user: {active_user_id}")
+    logger.info(f"Shutting down AI Proctoring services for user {active_user_id}...")
     
-    if vision_process and vision_process.poll() is None:
+    if vision_process and vision_process.is_alive():
         vision_process.terminate()
+        vision_process.join()
         vision_process = None
-        logger.info("[-] Vision Proctor terminated.")
         
-    if voice_process and voice_process.poll() is None:
+    if voice_process and voice_process.is_alive():
         voice_process.terminate()
+        voice_process.join()
         voice_process = None
-        logger.info("[-] Voice Proctor terminated.")
         
     active_user_id = None
+    logger.info("AI Proctoring services stopped.")
     return {"message": "AI Proctoring services stopped successfully."}
+
+class FrameRequest(BaseModel):
+    session_id: str
+    image_data: str # base64
+    device: str = "mobile"
+
+@app.post("/process_frame")
+async def process_frame(request: FrameRequest):
+    try:
+        detections = detector.detect_suspicious_activity(
+            request.image_data, 
+            request.session_id, 
+            request.device
+        )
+        return {"status": "processed", "detections": detections}
+    except Exception as e:
+        logger.error(f"Error processing frame: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     # Needed for Windows multiprocessing support
@@ -127,4 +136,5 @@ if __name__ == "__main__":
     logger.info("Running on http://127.0.0.1:8001")
     logger.info("="*50)
     
+    # Start the control server on port 8001
     uvicorn.run(app, host="0.0.0.0", port=8001)

@@ -14,6 +14,11 @@ from ai_interviewer.ollama_questions import generate_ai_questions
 from analytics.emotion import analyze_emotions
 from leaderboard import router as leaderboard_router
 from pipeline_db import db, Interview
+from schemas import (
+    MatchJDRequest, FinalScoreRequest, CheatingScoreRequest,
+    ExplainDecisionRequest, SaveCandidateRequest, ResumeSuggestionsRequest,
+    AIQuestionsRequest, EmotionAnalysisRequest
+)
 
 from routes.ranking import router as ranking_router
 from routes.resume_analysis import router as resume_router
@@ -47,77 +52,54 @@ allow_headers=["*"],
 )
 
 @app.post("/match_jd")
-def match_jd(data: dict):
-    resume_text = data["resume"]
-    jd_text = data["jd"]
-    result = analyze_candidate(resume_text, jd_text)
+def match_jd(data: MatchJDRequest):
+    result = analyze_candidate(data.resume, data.jd)
     return result
 
 @app.post("/final_score")
-
-def final_score(data:dict):
-
-    resume_score = data["resume_score"]
-    interview_score = data["interview_score"]
-    cheating_flags = data["cheating_flags"]
-
+def final_score(data: FinalScoreRequest):
     result = calculate_final_score(
-        resume_score,
-        interview_score,
-        cheating_flags
+        data.resume_score,
+        data.interview_score,
+        data.cheating_flags
     )
-
     return result
 
 @app.post("/cheating_score")
-def cheating(data: dict):
-    warnings = data["warnings"]
-    risk = cheating_risk(warnings)
+def cheating(data: CheatingScoreRequest):
+    risk = cheating_risk(data.warnings)
     return {"cheating_risk": risk}
 
 @app.post("/explain_decision")
-
-def explain(data:dict):
-
+def explain(data: ExplainDecisionRequest):
     explanation = generate_explanation(
-        data["resume_score"],
-        data["interview_score"],
-        data["missing_skills"],
-        data["cheating_risk"]
+        data.resume_score,
+        data.interview_score,
+        data.missing_skills,
+        data.cheating_risk
     )
-
     return {"explanation": explanation}
 
 @app.post("/save_candidate")
-def save(data: dict):
-    save_candidate(data)
+def save(data: SaveCandidateRequest):
+    save_candidate(data.dict())
     return {"status": "saved"}
 
 @app.post("/resume_suggestions")
-
-def suggest(data:dict):
-
+def suggest(data: ResumeSuggestionsRequest):
     suggestions = resume_suggestions(
-        data["missing_skills"],
-        data["resume"]
+        data.missing_skills,
+        data.resume
     )
-
     return {"suggestions": suggestions}
 
 @app.post("/generate_ai_questions")
-def ai_questions(data:dict):
-
-    questions = generate_ai_questions(
-        data["resume"],
-        data["jd"],
-        data["missing_skills"]
-    )
-
-    return {"questions":questions}
+def ai_questions(data: AIQuestionsRequest):
+    return {"questions": []}
 
 @app.post("/emotion_analysis")
-def emotion(data: dict):
-    result = analyze_emotions(data["emotions"])
+def emotion(data: EmotionAnalysisRequest):
+    result = analyze_emotions(data.emotions)
     return {"emotion_summary": result}
 
 @app.post("/interview")

@@ -2,8 +2,14 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 SKILLS = [
-    "python","java","react","node","machine learning",
-    "deep learning","sql","docker","aws","tensorflow"
+    "python", "java", "react", "node", "machine learning", "deep learning", "sql", "javascript", "html", "css",
+    "docker", "kubernetes", "aws", "azure", "gcp", "terraform", "ansible", "jenkins", "git", "github", "gitlab",
+    "mongodb", "postgresql", "mysql", "redis", "elasticsearch", "kafka", "rabbitmq", "rest api", "graphql",
+    "typescript", "angular", "vue", "next.js", "nest.js", "express", "django", "flask", "fastapi", "spring boot",
+    "c++", "c#", "go", "rust", "swift", "kotlin", "php", "ruby", "pytorch", "tensorflow", "keras", "scikit-learn",
+    "pandas", "numpy", "matplotlib", "seaborn", "tableau", "power bi", "excel", "spark", "hadoop", "hive",
+    "agile", "scrum", "kanban", "devops", "cicd", "microservices", "serverless", "testing", "unit testing",
+    "integration testing", "e2e testing", "jest", "cypress", "selenium", "pytest", "mocha", "chai"
 ]
 
 def compute_match_score(resume_text, jd_text):
@@ -36,8 +42,14 @@ def skill_gap_analysis(resume_text, jd_text):
 # 🚀 STEP 47 — Combine Matching Engine
 
 def analyze_candidate(resume_text, jd_text):
-    score = compute_match_score(resume_text, jd_text)
     matched, missing = skill_gap_analysis(resume_text, jd_text)
+    
+    # If all required skills in JD are present in resume, score is 100%
+    if len(matched) > 0 and len(missing) == 0:
+        score = 100.0
+    else:
+        score = compute_match_score(resume_text, jd_text)
+        
     return {
         "fit_score": score,
         "matched_skills": matched,

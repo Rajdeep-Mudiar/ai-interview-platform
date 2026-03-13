@@ -19,28 +19,31 @@ function InterviewFlow() {
   }, [location.state]);
 
   const [match, setMatch] = useState(null);
-  const [questions, setQuestions] = useState([]);
   const [suggestions, setSuggestions] = useState([]);
   const [busy, setBusy] = useState(false);
+  const [parsing, setParsing] = useState(false);
 
-  const handleFileChange = (e) => {
-    setResumeFile(e.target.files[0]);
-  };
-
-  const parseResume = async () => {
-    if (!resumeFile) return;
-    setBusy(true);
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setResumeFile(file);
+    
+    // Auto-parse on file selection
+    setParsing(true);
     try {
       const formData = new FormData();
-      formData.append("file", resumeFile);
+      formData.append("file", file);
       const res = await axiosClient.post("/parse_resume", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
       });
       setResumeText(res.data.text);
+    } catch (err) {
+      console.error("Failed to parse resume:", err);
+      alert("Failed to parse resume. Please try again.");
     } finally {
-      setBusy(false);
+      setParsing(false);
     }
   };
 
@@ -52,45 +55,20 @@ function InterviewFlow() {
         jd: jd,
       });
       setMatch(res.data);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const generateQuestions = async () => {
-    if (!match) return;
-    setBusy(true);
-    try {
-      const res = await axiosClient.post(
-        "/generate_ai_questions",
-        {
-          resume: resumeText,
-          jd: jd,
-          missing_skills: match.missing_skills,
-        },
-      );
-      setQuestions(res.data.questions);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const getSuggestions = async () => {
-    if (!match) return;
-    setBusy(true);
-    try {
-      const res = await axiosClient.post("/resume_suggestions", {
-        missing_skills: match.missing_skills,
+      
+      // Auto-get suggestions after analysis
+      const suggRes = await axiosClient.post("/resume_suggestions", {
+        missing_skills: res.data.missing_skills,
         resume: resumeText,
       });
-      setSuggestions(res.data.suggestions);
+      setSuggestions(suggRes.data.suggestions);
     } finally {
       setBusy(false);
     }
   };
 
   const saveInterview = async () => {
-    if (!match || !questions.length || !suggestions.length) return;
+    if (!match || !suggestions.length) return;
     const session = getUserSession();
     if (!session) return;
 
@@ -102,11 +80,11 @@ function InterviewFlow() {
         resume: resumeText,
         jd: jd,
         fit_score: match.fit_score,
-        overallScore: match.fit_score, // Using fit_score as demo overallScore for now
-        timeTaken: Math.floor(Math.random() * 15) + 15, // random demo time
-        integrity: 100, // demo integrity
+        overallScore: match.fit_score, 
+        timeTaken: Math.floor(Math.random() * 15) + 15, 
+        integrity: 100, 
         missing_skills: match.missing_skills,
-        questions: questions,
+        questions: [], // No questions required
         suggestions: suggestions,
       });
       alert("Interview results saved to database!");
@@ -126,8 +104,7 @@ function InterviewFlow() {
             AI interview pipeline
           </h1>
           <p className="mt-1 text-sm text-slate-600">
-            Upload a resume and paste a job description to generate questions and
-            improvements.
+            Upload a resume and paste a job description to get instant feedback and improvements.
           </p>
         </div>
       </div>
@@ -143,11 +120,12 @@ function InterviewFlow() {
           <CardBody className="grid gap-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Resume</Label>
-                <Input type="file" onChange={handleFileChange} />
-                <Button onClick={parseResume} disabled={!resumeFile || busy}>
-                  {busy ? "Parsing..." : "Parse Resume"}
-                </Button>
+                <Label>Resume (PDF)</Label>
+                <div className="flex flex-col gap-2">
+                  <Input type="file" accept=".pdf" onChange={handleFileChange} />
+                  {parsing && <span className="text-xs text-blue-600 animate-pulse">Parsing resume...</span>}
+                  {resumeText && !parsing && <span className="text-xs text-emerald-600 font-medium">✓ Resume parsed successfully</span>}
+                </div>
               </div>
               <div className="space-y-2">
                 <Label>Job description</Label>
@@ -163,40 +141,35 @@ function InterviewFlow() {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <Button
                 onClick={analyzeResume}
-                disabled={!resumeText.trim() || !jd.trim() || busy}
+                disabled={!resumeText.trim() || !jd.trim() || busy || parsing}
+                className="bg-blue-600 hover:bg-blue-700"
               >
-                {busy ? "Analyzing..." : "Analyze resume"}
-              </Button>
-              <Button
-                onClick={generateQuestions}
-                variant="secondary"
-                disabled={!match || busy}
-              >
-                Generate interview questions
-              </Button>
-              <Button
-                onClick={getSuggestions}
-                variant="secondary"
-                disabled={!match || busy}
-              >
-                Get resume suggestions
+                {busy ? "Analyzing..." : "Analyze & Get Suggestions"}
               </Button>
               <Button
                 onClick={saveInterview}
                 variant="secondary"
-                disabled={!match || !questions.length || !suggestions.length || busy}
+                disabled={!match || !suggestions.length || busy}
               >
-                Save interview
+                Save results
               </Button>
             </div>
           </CardBody>
+          {resumeText && (
+            <CardBody className="border-t border-slate-100 pt-4">
+              <Label className="text-xs text-slate-500 uppercase tracking-wider">Parsed Resume Text Preview</Label>
+              <div className="mt-2 max-h-40 overflow-y-auto text-xs text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-200 whitespace-pre-wrap">
+                {resumeText}
+              </div>
+            </CardBody>
+          )}
         </Card>
 
         <div className="grid gap-6 lg:col-span-5">
           <Card>
             <CardHeader className="pb-4">
-              <div className="text-sm font-semibold text-slate-900">Match</div>
-              <div className="text-sm text-slate-600">Fit score and gaps.</div>
+              <div className="text-sm font-semibold text-slate-900">Analysis Results</div>
+              <div className="text-sm text-slate-600">Match score and skill gaps.</div>
             </CardHeader>
             <CardBody>
               {match ? (
@@ -222,7 +195,7 @@ function InterviewFlow() {
                 </div>
               ) : (
                 <div className="rounded-xl bg-slate-50 p-5 text-sm text-slate-600 ring-1 ring-slate-200">
-                  Analyze the inputs to see the match results.
+                  Upload a resume and provide a JD to see analysis.
                 </div>
               )}
             </CardBody>
@@ -231,56 +204,29 @@ function InterviewFlow() {
           <Card>
             <CardHeader className="pb-4">
               <div className="text-sm font-semibold text-slate-900">
-                Outputs
+                AI Suggestions
               </div>
               <div className="text-sm text-slate-600">
-                Suggestions and generated questions.
+                How to improve the resume for this role.
               </div>
             </CardHeader>
             <CardBody className="grid gap-4">
               <div className="space-y-2">
-                <div className="text-xs font-medium text-slate-500">
-                  Resume suggestions
-                </div>
                 {suggestions?.length ? (
                   <ul className="grid gap-2 text-sm text-slate-700">
                     {suggestions.map((s, i) => (
                       <li
                         key={i}
-                        className="rounded-xl bg-white p-3 ring-1 ring-slate-200"
+                        className="rounded-xl bg-white p-3 ring-1 ring-slate-200 flex gap-2"
                       >
+                        <span className="text-blue-600 font-bold">•</span>
                         {s}
                       </li>
                     ))}
                   </ul>
                 ) : (
                   <div className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600 ring-1 ring-slate-200">
-                    No suggestions yet.
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <div className="text-xs font-medium text-slate-500">
-                  Interview questions
-                </div>
-                {questions?.length ? (
-                  <ol className="grid gap-2 text-sm text-slate-700">
-                    {questions.map((q, i) => (
-                      <li
-                        key={i}
-                        className="rounded-xl bg-white p-3 ring-1 ring-slate-200"
-                      >
-                        <span className="font-medium text-slate-900">
-                          Q{i + 1}.
-                        </span>{" "}
-                        {q}
-                      </li>
-                    ))}
-                  </ol>
-                ) : (
-                  <div className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600 ring-1 ring-slate-200">
-                    No questions generated yet.
+                    Run analysis to see suggestions.
                   </div>
                 )}
               </div>
