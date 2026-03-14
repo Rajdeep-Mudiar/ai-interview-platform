@@ -41,25 +41,42 @@ export default function Jobs() {
 
   useEffect(() => {
     async function loadData() {
+      setLoading(true);
       try {
-        const params = isRecruiter ? { recruiter_id: session.id } : {};
-        const [jobsRes, resultsRes] = await Promise.all([
-          axiosClient.get("/jobs", { params }),
-          !isRecruiter ? axiosClient.get(`/stats/candidate/${session.id}`) : Promise.resolve({ data: { history: [] } })
-        ]);
+        const params = isRecruiter ? { recruiter_id: session?.id } : {};
         
-        setJobs(jobsRes.data);
-        if (!isRecruiter) {
-          setResults(resultsRes.data.history || []);
-        }
+        // Load jobs - handle independently to prevent blocking
+        const jobsPromise = axiosClient.get("/jobs", { params })
+          .then(res => {
+            console.log("Jobs fetched successfully:", res.data);
+            setJobs(res.data || []);
+          })
+          .catch(err => {
+            console.error("Error fetching jobs:", err);
+            setJobs([]);
+          });
+
+        // Load candidate results - handle independently
+        const resultsPromise = (!isRecruiter && session?.id) 
+          ? axiosClient.get(`/stats/candidate/${session.id}`)
+              .then(res => {
+                setResults(res.data.history || []);
+              })
+              .catch(err => {
+                console.error("Error fetching candidate stats:", err);
+                setResults([]);
+              })
+          : Promise.resolve().then(() => setResults([]));
+
+        await Promise.all([jobsPromise, resultsPromise]);
       } catch (err) {
-        console.error("Failed to load jobs:", err);
+        console.error("Unexpected error in loadData:", err);
       } finally {
         setLoading(false);
       }
     }
     loadData();
-  }, []);
+  }, [isRecruiter, session?.id]);
 
   const filteredJobs = jobs.filter(job => 
     job.title.toLowerCase().includes(search.toLowerCase()) ||

@@ -28,12 +28,33 @@ QUESTION_BANK = {
     ]
 }
 
+DEFAULT_QUESTIONS = [
+    "Tell me about a challenging project you've worked on recently.",
+    "How do you stay up-to-date with new technologies and industry trends?",
+    "Describe a situation where you had to work with a difficult team member.",
+    "What are your core strengths as a software developer?",
+    "How do you approach debugging a complex problem?"
+]
+
 def generate_questions(skills):
     questions = []
+    # Normalize skills to lowercase for better matching
+    skills = [s.lower() for s in skills]
+    
     for skill in skills:
-        if skill in QUESTION_BANK:
-            q = random.choice(QUESTION_BANK[skill])
+        # Check for partial matches too
+        matched_skill = next((k for k in QUESTION_BANK.keys() if k in skill or skill in k), None)
+        if matched_skill:
+            q = random.choice(QUESTION_BANK[matched_skill])
+            if q not in questions:
+                questions.append(q)
+    
+    # If no skills matched or we need more questions, add from default
+    while len(questions) < 3:
+        q = random.choice(DEFAULT_QUESTIONS)
+        if q not in questions:
             questions.append(q)
+            
     return questions[:5]
 
 def generate_questions_with_count(skills, count):

@@ -96,12 +96,18 @@ ChartJS.register(
   const [isRecording, setIsRecording] = useState(false);
 
   useEffect(() => {
-    // If we have skills passed from ResumeAnalysis, auto-initialize
-    if (location.state?.skills && location.state.skills.length > 0 && questions.length === 0 && !loading) {
-      console.log("Auto-initializing interview with skills:", location.state.skills);
-      loadQuestions(location.state.skills);
+    // Auto-initialize if we have jobId (either from state or search params)
+    if (questions.length === 0 && !loading && !hasStarted) {
+      if (location.state?.skills && location.state.skills.length > 0) {
+        console.log("Auto-initializing interview with skills from state:", location.state.skills);
+        loadQuestions(location.state.skills);
+      } else if (jobId) {
+        console.log("Auto-initializing interview with jobId:", jobId);
+        // We pass empty skills because backend will fetch recruiter questions via jobId
+        loadQuestions([]);
+      }
     }
-  }, [location.state, questions.length, loading]);
+  }, [location.state, jobId, questions.length, loading, hasStarted]);
 
   // Start/Stop Python AI services
   async function startPythonAIServices() {
@@ -133,6 +139,7 @@ ChartJS.register(
     try {
       const res = await axiosClient.post("/generate-questions", {
         skills: skills,
+        job_id: jobId, // Pass jobId to backend to fetch recruiter questions
       });
       setQuestions(res.data.questions);
       setCurrent(0);
@@ -150,16 +157,20 @@ ChartJS.register(
 
   // Monitor face detection to start the interview
   useEffect(() => {
-    if (isAnalyzingFace && isFaceDetected && !hasStarted) {
-      const timer = setTimeout(() => {
+    let timer;
+    if (isAnalyzingFace && isFaceDetected && !hasStarted && questions.length > 0) {
+      console.log("Face detected and questions loaded. Starting interview timer...");
+      timer = setTimeout(() => {
         setIsAnalyzingFace(false);
         setHasStarted(true);
         // Trigger Python AI services when face is confirmed and interview actually starts
         startPythonAIServices();
       }, 2000); // Small delay for "Analyzing" feel
-      return () => clearTimeout(timer);
     }
-  }, [isAnalyzingFace, isFaceDetected, hasStarted]);
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [isAnalyzingFace, isFaceDetected, hasStarted, questions.length]);
   // Interview timer
   useEffect(() => {
     if (integrity <= 0 && !terminated && !completed) {
@@ -325,7 +336,7 @@ ChartJS.register(
     }
     interval = setInterval(detect, 2000);
     return () => clearInterval(interval);
-  }, []);
+  }, [sessionId, isAnalyzingFace, hasStarted]);
 
   // Text-to-Speech
   function speak(text) {
@@ -358,20 +369,14 @@ ChartJS.register(
     }
   };
 
-  // Initialize interview with relevant skills
+  // Manual trigger for interview initialization if auto-init fails
   const generate = async () => {
+    if (loading || questions.length > 0) return;
+    
     if (location.state?.skills) {
       loadQuestions(location.state.skills);
     } else if (jobId) {
-      // Fallback: fetch job to get title/description if no state passed
-      try {
-        const res = await axiosClient.get(`/jobs/${jobId}`);
-        // Use job title as a primary skill focus
-        loadQuestions([res.data.title]);
-      } catch (err) {
-        console.error("Failed to fetch job for skills:", err);
-        loadQuestions(["General Technical"]);
-      }
+      loadQuestions([]);
     } else {
       loadQuestions(["General Technical"]);
     }

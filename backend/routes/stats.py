@@ -51,21 +51,29 @@ async def get_candidate_stats(user_id: str):
             "history": []
         }
     
-    latest = user_results[0]
-    
-    # Calculate percentile (mock logic for now or simple count)
-    all_scores = [r["overallScore"] for r in results_col.find({}, {"overallScore": 1})]
+    # Calculate percentile (robustly handle missing fields)
+    all_results = list(results_col.find({}, {"overallScore": 1}))
+    all_scores = [r.get("overallScore", 0) for r in all_results]
     all_scores.sort()
-    count_below = sum(1 for s in all_scores if s < latest["overallScore"])
+    
+    current_score = latest.get("overallScore", 0)
+    count_below = sum(1 for s in all_scores if s < current_score)
     percentile = round((count_below / len(all_scores)) * 100) if all_scores else 0
     
     # Format history for frontend
     history = []
     for res in user_results:
+        # Get date safely from ObjectId
+        try:
+            res_id = res.get("_id")
+            date_str = str(res_id.generation_time.date()) if res_id else "Unknown"
+        except:
+            date_str = "Unknown"
+
         history.append({
-            "id": str(res["_id"]),
+            "id": str(res.get("_id")),
             "job_id": res.get("job_id"),
-            "date": str(res.get("_id").generation_time.date()) if hasattr(res.get("_id"), "generation_time") else "Unknown",
+            "date": date_str,
             "score": res.get("overallScore", 0),
             "time": f"{res.get('timeTaken', 0)}m",
             "integrity": res.get("integrity", 0),
@@ -73,10 +81,10 @@ async def get_candidate_stats(user_id: str):
         })
 
     return {
-        "status": "Completed",
+        "status": latest.get("status", "Completed"),
         "percentile": f"Top {100 - percentile}%",
         "betterThan": count_below,
         "timeTaken": f"{latest.get('timeTaken', 0)}m",
-        "lastScore": latest.get("overallScore", 0),
+        "lastScore": current_score,
         "history": history
     }
