@@ -31,5 +31,6 @@ def analyze_resume(file, job_description):
         "score": score,
         "resume_skills": resume_skills,
         "missing_skills": missing,
-        "resume_text": resume_text
+        "resume_text": resume_text,
+        "job_description": job_description
     }

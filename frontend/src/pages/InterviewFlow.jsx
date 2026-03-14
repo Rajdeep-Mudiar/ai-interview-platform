@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import axiosClient from "../utils/axiosClient";
 import { getUserSession } from "../utils/auth";
 import Button from "../components/ui/Button";
@@ -7,14 +7,27 @@ import { Card, CardBody, CardHeader } from "../components/ui/Card";
 import { Input, Label, Textarea } from "../components/ui/Form";
 
 function InterviewFlow() {
+  const navigate = useNavigate();
   const location = useLocation();
   const [resumeFile, setResumeFile] = useState(null);
   const [resumeText, setResumeText] = useState("");
   const [jd, setJd] = useState("");
+  const [jobs, setJobs] = useState([]);
+  const [selectedJob, setSelectedJob] = useState(null);
 
   useEffect(() => {
-    if (location.state) {
-      setJd(location.state.jd || "");
+    async function loadJobs() {
+      try {
+        const res = await axiosClient.get("/jobs");
+        setJobs(res.data);
+      } catch (err) {
+        console.error("Failed to load jobs:", err);
+      }
+    }
+    loadJobs();
+
+    if (location.state?.jd) {
+      setJd(location.state.jd);
     }
   }, [location.state]);
 
@@ -28,47 +41,51 @@ function InterviewFlow() {
     if (!file) return;
     setResumeFile(file);
     
-    // Auto-parse on file selection
     setParsing(true);
     try {
       const formData = new FormData();
       formData.append("file", file);
       const res = await axiosClient.post("/parse_resume", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+        headers: { "Content-Type": "multipart/form-data" },
       });
       setResumeText(res.data.text);
     } catch (err) {
       console.error("Failed to parse resume:", err);
-      alert("Failed to parse resume. Please try again.");
+      alert("Failed to parse resume.");
     } finally {
       setParsing(false);
     }
   };
 
-  const analyzeResume = async () => {
+  const analyzeForJob = async (job) => {
+    if (!resumeText) {
+      alert("Please upload and parse your resume first.");
+      return;
+    }
+    setSelectedJob(job);
+    setJd(job.description);
     setBusy(true);
     try {
       const res = await axiosClient.post("/match_jd", {
         resume: resumeText,
-        jd: jd,
+        jd: job.description,
       });
       setMatch(res.data);
       
-      // Auto-get suggestions after analysis
       const suggRes = await axiosClient.post("/resume_suggestions", {
         missing_skills: res.data.missing_skills,
         resume: resumeText,
       });
       setSuggestions(suggRes.data.suggestions);
+    } catch (err) {
+      console.error("Analysis failed:", err);
     } finally {
       setBusy(false);
     }
   };
 
   const saveInterview = async () => {
-    if (!match || !suggestions.length) return;
+    if (!match || !selectedJob) return;
     const session = getUserSession();
     if (!session) return;
 
@@ -78,7 +95,7 @@ function InterviewFlow() {
         user_id: session.id,
         name: session.name,
         resume: resumeText,
-        jd: jd,
+        jd: selectedJob.description,
         fit_score: Math.round(match.fit_score),
         overallScore: Math.round(match.fit_score), 
         timeTaken: Math.floor(Math.random() * 15) + 15, 
@@ -88,9 +105,9 @@ function InterviewFlow() {
         suggestions: suggestions,
       };
       
-      console.log("Saving interview data:", interviewData);
       await axiosClient.post("/interview", interviewData);
-      alert("Interview results saved to database!");
+      alert("Interview saved! Redirecting to dashboard...");
+      navigate("/dashboard");
     } catch (err) {
       console.error("Failed to save interview:", err);
       alert("Failed to save interview results.");
@@ -101,138 +118,155 @@ function InterviewFlow() {
 
   return (
     <div className="cb-container py-10 sm:py-14">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
-            AI interview pipeline
-          </h1>
-          <p className="mt-1 text-sm text-slate-600">
-            Upload a resume and paste a job description to get instant feedback and improvements.
-          </p>
-        </div>
+      <div className="mx-auto max-w-3xl text-center mb-10">
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+          AI Interview Pipeline
+        </h1>
+        <p className="mt-2 text-base text-slate-600">
+          Upload your resume and select a target job to begin your automated interview evaluation.
+        </p>
       </div>
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-12">
-        <Card className="lg:col-span-7">
-          <CardHeader className="pb-4">
-            <div className="text-sm font-semibold text-slate-900">Inputs</div>
-            <div className="text-sm text-slate-600">
-              Provide the resume file and job description.
+      <div className="grid gap-8 lg:grid-cols-12">
+        {/* Left Column: Resume Upload */}
+        <div className="lg:col-span-4 space-y-6">
+          <Card className="p-6">
+            <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+              <span className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white text-sm">1</span>
+              Upload Resume
+            </h3>
+            <div className="space-y-4">
+              <div className="p-4 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50 hover:border-blue-400 transition-colors group">
+                <input 
+                  type="file" 
+                  id="resume-upload" 
+                  className="hidden" 
+                  accept=".pdf" 
+                  onChange={handleFileChange} 
+                />
+                <label htmlFor="resume-upload" className="cursor-pointer flex flex-col items-center text-center">
+                  <svg className="w-8 h-8 text-slate-400 group-hover:text-blue-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                  <span className="text-sm font-medium text-slate-600">
+                    {resumeFile ? resumeFile.name : "Click to upload PDF"}
+                  </span>
+                </label>
+              </div>
+              {parsing && <div className="text-xs text-blue-600 animate-pulse text-center">Parsing content...</div>}
+              {resumeText && !parsing && <div className="text-xs text-emerald-600 font-bold text-center">✓ Content Ready</div>}
             </div>
-          </CardHeader>
-          <CardBody className="grid gap-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Resume (PDF)</Label>
-                <div className="flex flex-col gap-2">
-                  <Input type="file" accept=".pdf" onChange={handleFileChange} />
-                  {parsing && <span className="text-xs text-blue-600 animate-pulse">Parsing resume...</span>}
-                  {resumeText && !parsing && <span className="text-xs text-emerald-600 font-medium">✓ Resume parsed successfully</span>}
+          </Card>
+
+          {match && (
+            <Card className="p-6 bg-slate-900 text-white border-none shadow-xl">
+              <h3 className="text-lg font-bold mb-4">Pipeline Status</h3>
+              <div className="space-y-4">
+                <div className="flex flex-col mb-4">
+                  <span className="text-slate-400 text-xs uppercase tracking-widest mb-1">Targeting Job</span>
+                  <span className="text-blue-400 font-bold text-lg leading-tight">{selectedJob?.title}</span>
+                </div>
+                <div className="flex justify-between items-end">
+                  <span className="text-slate-400 text-sm">Match Score</span>
+                  <span className="text-3xl font-bold text-blue-400">{Math.round(match.fit_score)}%</span>
+                </div>
+                <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                  <div className="h-full bg-blue-500 transition-all duration-1000" style={{ width: `${match.fit_score}%` }}></div>
+                </div>
+                <Button 
+                  onClick={saveInterview} 
+                  disabled={busy} 
+                  className="w-full bg-blue-600 hover:bg-blue-700 h-12 font-bold"
+                >
+                  {busy ? "Processing..." : "Complete & Save Interview"}
+                </Button>
+              </div>
+            </Card>
+          )}
+        </div>
+
+        {/* Middle Column: Job Selection */}
+        <div className="lg:col-span-4 space-y-4">
+          <h3 className="text-lg font-bold text-slate-900 px-1 flex items-center gap-2">
+            <span className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white text-sm">2</span>
+            Select Job
+          </h3>
+          <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
+            {jobs.map((job) => (
+              <div 
+                key={job.id} 
+                className={`p-4 rounded-2xl border transition-all cursor-pointer hover:shadow-md ${
+                  selectedJob?.id === job.id 
+                  ? 'bg-blue-50 border-blue-200 ring-1 ring-blue-200' 
+                  : 'bg-white border-slate-200 hover:border-blue-300'
+                }`}
+                onClick={() => analyzeForJob(job)}
+              >
+                <h4 className="font-bold text-slate-900">{job.title}</h4>
+                <p className="text-xs text-slate-500 mt-1 line-clamp-2">{job.description}</p>
+                <div className="mt-4 flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Available Now</span>
+                  <div className="text-blue-600 text-xs font-bold flex items-center gap-1">
+                    Analyze Match <span className="text-lg">→</span>
+                  </div>
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label>Job description</Label>
-                <Textarea
-                  placeholder="Paste job description…"
-                  value={jd}
-                  onChange={(e) => setJd(e.target.value)}
-                  className="min-h-44"
-                />
-              </div>
-            </div>
+            ))}
+          </div>
+        </div>
 
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <Button
-                onClick={analyzeResume}
-                disabled={!resumeText.trim() || !jd.trim() || busy || parsing}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                {busy ? "Analyzing..." : "Analyze & Get Suggestions"}
-              </Button>
-              <Button
-                onClick={saveInterview}
-                variant="secondary"
-                disabled={!match || !suggestions.length || busy}
-              >
-                Save results
-              </Button>
-            </div>
-          </CardBody>
-          {resumeText && (
-            <CardBody className="border-t border-slate-100 pt-4">
-              <Label className="text-xs text-slate-500 uppercase tracking-wider">Parsed Resume Text Preview</Label>
-              <div className="mt-2 max-h-40 overflow-y-auto text-xs text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-200 whitespace-pre-wrap">
-                {resumeText}
-              </div>
-            </CardBody>
-          )}
-        </Card>
-
-        <div className="grid gap-6 lg:col-span-5">
-          <Card>
-            <CardHeader className="pb-4">
-              <div className="text-sm font-semibold text-slate-900">Analysis Results</div>
-              <div className="text-sm text-slate-600">Match score and skill gaps.</div>
+        {/* Right Column: AI Insights */}
+        <div className="lg:col-span-4 space-y-6">
+          <h3 className="text-lg font-bold text-slate-900 px-1 flex items-center gap-2">
+            <span className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white text-sm">3</span>
+            AI Insights
+          </h3>
+          
+          <Card className="border-none shadow-sm ring-1 ring-slate-200 min-h-[200px]">
+            <CardHeader className="pb-2">
+              <div className="text-sm font-bold text-slate-900">Skill Gap Analysis</div>
             </CardHeader>
             <CardBody>
               {match ? (
-                <div className="grid gap-3">
-                  <div className="rounded-xl bg-slate-50 p-4 ring-1 ring-slate-200">
-                    <div className="text-xs font-medium text-slate-500">
-                      Fit score
-                    </div>
-                    <div className="mt-1 text-2xl font-semibold text-slate-900">
-                      {match.fit_score}%
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-[10px] uppercase tracking-widest text-slate-400 mb-2 block">Missing from Resume</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {match.missing_skills?.length > 0 ? (
+                        match.missing_skills.map((skill, i) => (
+                          <span key={i} className="px-2.5 py-1 bg-rose-50 text-rose-700 text-xs font-bold rounded-lg border border-rose-100">
+                            {skill}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-xs text-emerald-600 font-bold italic">No gaps detected! Perfect match.</span>
+                      )}
                     </div>
                   </div>
-                  <div className="rounded-xl bg-white p-4 ring-1 ring-slate-200">
-                    <div className="text-xs font-medium text-slate-500">
-                      Missing skills
-                    </div>
-                    <div className="mt-1 text-sm text-slate-700">
-                      {match.missing_skills?.length
-                        ? match.missing_skills.join(", ")
-                        : "None detected."}
+                  
+                  <div className="pt-4 border-t border-slate-100">
+                    <Label className="text-[10px] uppercase tracking-widest text-slate-400 mb-2 block">Optimization Suggestions</Label>
+                    <div className="space-y-2">
+                      {suggestions.map((s, i) => (
+                        <div key={i} className="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-100 leading-relaxed">
+                          {s}
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
               ) : (
-                <div className="rounded-xl bg-slate-50 p-5 text-sm text-slate-600 ring-1 ring-slate-200">
-                  Upload a resume and provide a JD to see analysis.
+                <div className="flex flex-col items-center justify-center py-10 text-center">
+                  <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center mb-3">
+                    <svg className="w-6 h-6 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <p className="text-xs text-slate-400 italic px-6">
+                    Select a job from the list to see personalized AI improvement suggestions.
+                  </p>
                 </div>
               )}
-            </CardBody>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-4">
-              <div className="text-sm font-semibold text-slate-900">
-                AI Suggestions
-              </div>
-              <div className="text-sm text-slate-600">
-                How to improve the resume for this role.
-              </div>
-            </CardHeader>
-            <CardBody className="grid gap-4">
-              <div className="space-y-2">
-                {suggestions?.length ? (
-                  <ul className="grid gap-2 text-sm text-slate-700">
-                    {suggestions.map((s, i) => (
-                      <li
-                        key={i}
-                        className="rounded-xl bg-white p-3 ring-1 ring-slate-200 flex gap-2"
-                      >
-                        <span className="text-blue-600 font-bold">•</span>
-                        {s}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <div className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600 ring-1 ring-slate-200">
-                    Run analysis to see suggestions.
-                  </div>
-                )}
-              </div>
             </CardBody>
           </Card>
         </div>

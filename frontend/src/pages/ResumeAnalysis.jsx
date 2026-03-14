@@ -112,7 +112,7 @@ export default function ResumeAnalysis() {
                   <h4 className="font-semibold text-sm text-slate-800">Missing Skills</h4>
                   <p className="text-xs text-slate-600 mt-1">{result.missing_skills?.join(", ") || "None"}</p>
                 </div>
-                <Button onClick={() => navigate("/interview-flow")} className="w-full mt-4">
+                <Button onClick={() => navigate("/interview-flow", { state: { jd: result.job_description } })} className="w-full mt-4">
                   Start Interview Pipeline
                 </Button>
               </div>
