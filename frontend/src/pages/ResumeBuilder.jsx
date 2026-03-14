@@ -127,18 +127,47 @@ export default function ResumeBuilder() {
   };
 
   const generatePDF = async () => {
-    const element = resumeRef.current;
-    const canvas = await html2canvas(element, { 
-      scale: 3, // Higher scale for better OCR if needed, though we want text
-      useCORS: true,
-      logging: false,
-    });
-    const imgData = canvas.toDataURL("image/png");
-    const pdf = new jsPDF("p", "mm", "a4");
-    const imgWidth = 210;
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-    pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight, "", "FAST");
-    pdf.save(`${resumeData.personal_information.fullName || "Resume"}.pdf`);
+    try {
+      const element = resumeRef.current;
+      if (!element) return;
+      
+      const canvas = await html2canvas(element, { 
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#ffffff"
+      });
+      
+      const imgData = canvas.toDataURL("image/jpeg", 0.95);
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4"
+      });
+      
+      const imgWidth = 210;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      // If content is longer than one page
+      let heightLeft = imgHeight;
+      let position = 0;
+      const pageHeight = 297;
+
+      pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+      
+      pdf.save(`${resumeData.personal_information.fullName || "Resume"}.pdf`);
+    } catch (err) {
+      console.error("PDF Generation Error:", err);
+      alert("Failed to generate PDF. Please try the 'Print to PDF' option instead.");
+    }
   };
 
   const handlePrint = () => {

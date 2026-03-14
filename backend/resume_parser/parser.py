@@ -32,22 +32,44 @@ def clean_text(text):
     text = re.sub(r'[^\x00-\x7f]', r'', text)
     return text.strip()
 
-def parse_resume(file_path):
+import io
+
+def parse_resume(file):
     try:
-        text = extract_text(file_path)
+        # If file is a path string, open it; if it's a file-like object, read it
+        if isinstance(file, str):
+            text = extract_text(file)
+        else:
+            # For UploadFile.file (SPOOL or BytesIO)
+            file.seek(0)
+            file_content = file.read()
+            text = extract_text(io.BytesIO(file_content))
+            
         text = clean_text(text)
 
-        doc = nlp(text)
+        # Better skill extraction: check for multi-word skills and standalone words
+        text_lower = text.lower()
         skills = []
-
+        
+        # 1. Check for multi-word skills first (e.g., "machine learning")
+        multi_word_skills = [s for s in SKILL_KEYWORDS if " " in s]
+        for skill in multi_word_skills:
+            if skill in text_lower:
+                skills.append(skill)
+                
+        # 2. Check for single-word skills as standalone tokens
+        single_word_skills = [s for s in SKILL_KEYWORDS if " " not in s]
+        doc = nlp(text_lower)
         for token in doc:
-            if token.text.lower() in SKILL_KEYWORDS:
-                skills.append(token.text.lower())
+            if token.text in single_word_skills:
+                skills.append(token.text)
 
         return {
             "text": text,
             "skills": list(set(skills))
         }
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         print(f"Error parsing resume: {e}")
         return {"text": "", "skills": [], "error": str(e)}
