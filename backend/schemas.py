@@ -29,10 +29,5 @@ class ResumeSuggestionsRequest(BaseModel):
     missing_skills: List[str]
     resume: str
 
-class AIQuestionsRequest(BaseModel):
-    resume: str
-    jd: str
-    missing_skills: List[str]
-
 class EmotionAnalysisRequest(BaseModel):
     emotions: List[str]

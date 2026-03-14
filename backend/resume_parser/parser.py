@@ -4,14 +4,23 @@ import spacy
 nlp = spacy.load("en_core_web_sm")
 
 SKILL_KEYWORDS = [
+    # Programming Languages
     "python", "java", "react", "node", "machine learning", "deep learning", "sql", "javascript", "html", "css",
+    "c++", "c#", "go", "rust", "swift", "kotlin", "php", "ruby", "typescript", "scala", "dart", "r", "shell script",
+    # Frameworks & Libraries
+    "next.js", "nest.js", "express", "django", "flask", "fastapi", "spring boot", "angular", "vue", "svelte",
+    "pytorch", "tensorflow", "keras", "scikit-learn", "pandas", "numpy", "matplotlib", "seaborn", "tailwind",
+    "bootstrap", "material ui", "redux", "graphql", "rest api", "junit", "pytest", "jest", "cypress", "selenium",
+    # Infrastructure & DevOps
     "docker", "kubernetes", "aws", "azure", "gcp", "terraform", "ansible", "jenkins", "git", "github", "gitlab",
-    "mongodb", "postgresql", "mysql", "redis", "elasticsearch", "kafka", "rabbitmq", "rest api", "graphql",
-    "typescript", "angular", "vue", "next.js", "nest.js", "express", "django", "flask", "fastapi", "spring boot",
-    "c++", "c#", "go", "rust", "swift", "kotlin", "php", "ruby", "pytorch", "tensorflow", "keras", "scikit-learn",
-    "pandas", "numpy", "matplotlib", "seaborn", "tableau", "power bi", "excel", "spark", "hadoop", "hive",
-    "agile", "scrum", "kanban", "devops", "cicd", "microservices", "serverless", "testing", "unit testing",
-    "integration testing", "e2e testing", "jest", "cypress", "selenium", "pytest", "mocha", "chai"
+    "devops", "cicd", "microservices", "serverless", "linux", "nginx", "apache", "prometheus", "grafana",
+    # Databases
+    "mongodb", "postgresql", "mysql", "redis", "elasticsearch", "kafka", "rabbitmq", "dynamodb", "sqlite", "oracle",
+    # Data & Analytics
+    "tableau", "power bi", "excel", "spark", "hadoop", "hive", "big data", "data visualization", "data mining",
+    # Methodology & Soft Skills
+    "agile", "scrum", "kanban", "project management", "sdlc", "testing", "unit testing", "integration testing",
+    "e2e testing", "system design", "problem solving", "communication", "leadership", "collaboration"
 ]
 
 import re

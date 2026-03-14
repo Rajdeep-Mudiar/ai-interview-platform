@@ -1,27 +1,6 @@
-import pdfplumber
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-import spacy
-
-nlp = spacy.load("en_core_web_sm")
-
-SKILLS_CONFIG = {
-    "skills": [
-        "python", "java", "react", "node", "sql",
-        "machine learning", "docker", "aws", "javascript"
-    ]
-}
-
-def extract_text_from_pdf(file):
-    text = ""
-    try:
-        with pdfplumber.open(file) as pdf:
-            for page in pdf.pages:
-                text += page.extract_text()
-    except Exception as e:
-        print(f"Error extracting text from PDF: {e}")
-        return ""
-    return text
+from resume_parser.parser import parse_resume, clean_text, SKILL_KEYWORDS
 
 def calculate_match_score(resume_text, job_description):
     documents = [resume_text, job_description]
@@ -31,19 +10,22 @@ def calculate_match_score(resume_text, job_description):
     score = round(similarity[0][0] * 100, 2)
     return score
 
-def extract_skills(text):
+def extract_skills_from_text(text):
     text = text.lower()
     found = []
-    for skill in SKILLS_CONFIG["skills"]:
+    for skill in SKILL_KEYWORDS:
         if skill in text:
             found.append(skill)
     return found
 
 def analyze_resume(file, job_description):
-    resume_text = extract_text_from_pdf(file)
+    parsed = parse_resume(file)
+    resume_text = parsed.get("text", "")
+    resume_skills = parsed.get("skills", [])
+    
     score = calculate_match_score(resume_text, job_description)
-    resume_skills = extract_skills(resume_text)
-    job_skills = extract_skills(job_description)
+    job_skills = extract_skills_from_text(job_description)
+    
     missing = list(set(job_skills) - set(resume_skills))
     return {
         "score": score,

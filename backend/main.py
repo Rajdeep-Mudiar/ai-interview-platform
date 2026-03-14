@@ -10,14 +10,13 @@ from analytics.integrity import cheating_risk
 from analytics.explain import generate_explanation
 from database.store import save_candidate
 from analytics.resume_advisor import resume_suggestions
-from ai_interviewer.ollama_questions import generate_ai_questions
 from analytics.emotion import analyze_emotions
 from leaderboard import router as leaderboard_router
 from pipeline_db import db, Interview
 from schemas import (
     MatchJDRequest, FinalScoreRequest, CheatingScoreRequest,
     ExplainDecisionRequest, SaveCandidateRequest, ResumeSuggestionsRequest,
-    AIQuestionsRequest, EmotionAnalysisRequest
+    EmotionAnalysisRequest
 )
 
 from routes.ranking import router as ranking_router
@@ -56,6 +55,11 @@ def match_jd(data: MatchJDRequest):
     result = analyze_candidate(data.resume, data.jd)
     return result
 
+@app.post("/parse_resume")
+async def parse_resume_route(file: UploadFile):
+    result = parse_resume(file.file)
+    return result
+
 @app.post("/final_score")
 def final_score(data: FinalScoreRequest):
     result = calculate_final_score(
@@ -92,10 +96,6 @@ def suggest(data: ResumeSuggestionsRequest):
         data.resume
     )
     return {"suggestions": suggestions}
-
-@app.post("/generate_ai_questions")
-def ai_questions(data: AIQuestionsRequest):
-    return {"questions": []}
 
 @app.post("/emotion_analysis")
 def emotion(data: EmotionAnalysisRequest):
