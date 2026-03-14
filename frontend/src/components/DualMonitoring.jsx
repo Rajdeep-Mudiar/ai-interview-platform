@@ -64,7 +64,7 @@ const DualMonitoring = ({ sessionId, setSessionId, jobId, onIntegrityChange }) =
   // WebSocket for real-time alerts
   useEffect(() => {
     if (sessionId) {
-      socketRef.current = new WebSocket(`ws://localhost:8000/monitoring/ws/${sessionId}`);
+      socketRef.current = new WebSocket(`ws://127.0.0.1:8000/monitoring/ws/${sessionId}`);
 
       socketRef.current.onmessage = (event) => {
         const data = JSON.parse(event.data);

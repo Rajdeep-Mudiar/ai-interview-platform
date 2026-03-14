@@ -139,9 +139,9 @@ ChartJS.register(
     try {
       const res = await axiosClient.post("/generate-questions", {
         skills: skills,
-        job_id: jobId, // Pass jobId to backend to fetch recruiter questions
+        job_id: jobId,
       });
-      setQuestions(res.data.questions);
+      setQuestions(res.data.questions || []);
       setCurrent(0);
       setProgress(0);
       setScore(null);
@@ -149,6 +149,7 @@ ChartJS.register(
       setAnswer("");
     } catch (err) {
       console.error("Failed to load questions:", err);
+      setQuestions([]);
       setIsAnalyzingFace(false);
     } finally {
       setLoading(false);
@@ -158,19 +159,27 @@ ChartJS.register(
   // Monitor face detection to start the interview
   useEffect(() => {
     let timer;
-    if (isAnalyzingFace && isFaceDetected && !hasStarted && questions.length > 0) {
-      console.log("Face detected and questions loaded. Starting interview timer...");
+    // We only transition if we have questions ready AND face is detected
+    if (isAnalyzingFace && isFaceDetected && !hasStarted && questions && questions.length > 0) {
+      console.log("Face detected and questions loaded. Starting technical assessment...");
       timer = setTimeout(() => {
         setIsAnalyzingFace(false);
         setHasStarted(true);
-        // Trigger Python AI services when face is confirmed and interview actually starts
         startPythonAIServices();
-      }, 2000); // Small delay for "Analyzing" feel
+      }, 2000); 
     }
     return () => {
       if (timer) clearTimeout(timer);
     };
-  }, [isAnalyzingFace, isFaceDetected, hasStarted, questions.length]);
+  }, [isAnalyzingFace, isFaceDetected, hasStarted, questions]);
+
+  // Handle case where questions might be empty or failed to load
+  useEffect(() => {
+    if (isAnalyzingFace && !loading && (!questions || questions.length === 0)) {
+      console.warn("Questions failed to load or are empty. Resetting analysis state.");
+      setIsAnalyzingFace(false);
+    }
+  }, [isAnalyzingFace, loading, questions]);
   // Interview timer
   useEffect(() => {
     if (integrity <= 0 && !terminated && !completed) {
@@ -238,105 +247,122 @@ ChartJS.register(
 
   // Real-time face detection
   useEffect(() => {
-    let interval;
+    let timeoutId;
+    let isMounted = true;
+
     async function detect() {
-      if (!videoRef.current || videoRef.current.readyState !== 4) return;
-      // Multiple faces
-      const detections = await faceapi.detectAllFaces(
-        videoRef.current,
-        new faceapi.TinyFaceDetectorOptions(),
-      );
-      if (detections.length > 1) {
-        setIsFaceDetected(false);
-        setAlert("Multiple faces detected!");
-        setIntegrity((prev) => Math.max(prev - 15, 0));
-        if (sessionId) {
-          axios.post("http://localhost:8000/monitoring/events", {
-            session_id: sessionId,
-            device: "desktop",
-            event: "multiple_person_detected",
-            confidence_score: 1.0,
-          });
-        }
-        return;
-      }
-      // No face
-      if (detections.length === 0) {
-        setIsFaceDetected(false);
-        setAlert("No face detected");
-        setIntegrity((prev) => Math.max(prev - 5, 0));
+      if (!isMounted || terminated || completed) return;
+      if (!videoRef.current || videoRef.current.readyState !== 4) {
+        timeoutId = setTimeout(detect, 2000);
         return;
       }
 
-      setIsFaceDetected(true);
-      // Looking away & emotion detection
-      const detection = await faceapi
-        .detectSingleFace(
+      try {
+        // Multiple faces
+        const detections = await faceapi.detectAllFaces(
           videoRef.current,
           new faceapi.TinyFaceDetectorOptions(),
-        )
-        .withFaceLandmarks()
-        .withFaceExpressions();
-      if (detection && detection.landmarks) {
-        // Simple head turn detection: compare nose position to center
-        const nose = detection.landmarks.getNose();
-        const leftEye = detection.landmarks.getLeftEye();
-        const rightEye = detection.landmarks.getRightEye();
-        if (nose && leftEye && rightEye) {
-          const noseX = nose[3].x;
-          const leftEyeX = leftEye[0].x;
-          const rightEyeX = rightEye[3].x;
-          const eyeDist = Math.abs(rightEyeX - leftEyeX);
-          const center = (leftEyeX + rightEyeX) / 2;
-          const headTurn = Math.abs(noseX - center) / eyeDist;
-          if (headTurn > 0.25) {
-            setAlert("Looking away from screen");
-            setIntegrity((prev) => Math.max(prev - 5, 0));
-            if (sessionId) {
-              axios.post("http://localhost:8000/monitoring/events", {
-                session_id: sessionId,
-                device: "desktop",
-                event: "looking_away",
-                confidence_score: 1.0,
-              });
+        );
+
+        if (detections.length > 1) {
+          setIsFaceDetected(false);
+          setAlert("Multiple faces detected!");
+          setIntegrity((prev) => Math.max(prev - 15, 0));
+          if (sessionId) {
+            axiosClient.post("/monitoring/events", {
+              session_id: sessionId,
+              device: "desktop",
+              event: "multiple_person_detected",
+              confidence_score: 1.0,
+            }).catch(e => console.error("Failed to log multiple faces:", e));
+          }
+        } else if (detections.length === 0) {
+          setIsFaceDetected(false);
+          setAlert("No face detected");
+          setIntegrity((prev) => Math.max(prev - 5, 0));
+        } else {
+          setIsFaceDetected(true);
+          // Looking away & emotion detection
+          const detection = await faceapi
+            .detectSingleFace(
+              videoRef.current,
+              new faceapi.TinyFaceDetectorOptions(),
+            )
+            .withFaceLandmarks()
+            .withFaceExpressions();
+
+          if (detection && detection.landmarks) {
+            const nose = detection.landmarks.getNose();
+            const leftEye = detection.landmarks.getLeftEye();
+            const rightEye = detection.landmarks.getRightEye();
+            if (nose && leftEye && rightEye) {
+              const noseX = nose[3].x;
+              const leftEyeX = leftEye[0].x;
+              const rightEyeX = rightEye[3].x;
+              const eyeDist = Math.abs(rightEyeX - leftEyeX);
+              const center = (leftEyeX + rightEyeX) / 2;
+              const headTurn = Math.abs(noseX - center) / eyeDist;
+              if (headTurn > 0.25) {
+                setAlert("Looking away from screen");
+                setIntegrity((prev) => Math.max(prev - 5, 0));
+                if (sessionId) {
+                  axiosClient.post("/monitoring/events", {
+                    session_id: sessionId,
+                    device: "desktop",
+                    event: "looking_away",
+                    confidence_score: 1.0,
+                  }).catch(e => console.error("Failed to log looking away:", e));
+                }
+              } else {
+                setAlert("");
+              }
             }
-            return;
+          }
+
+          // Emotion detection
+          if (detection && detection.expressions) {
+            const expressions = detection.expressions;
+            let maxEmotion = "neutral";
+            let maxValue = 0;
+            for (const emotion in expressions) {
+              if (expressions[emotion] > maxValue) {
+                maxValue = expressions[emotion];
+                maxEmotion = emotion;
+              }
+            }
+            setEmotion(maxEmotion);
+            
+            const interpretEmotion = (emo) => {
+              if (emo === "happy") return "Confident";
+              if (emo === "neutral") return "Calm";
+              if (emo === "fearful" || emo === "sad") return "Nervous";
+              return "Neutral";
+            };
+            setBehavior(interpretEmotion(maxEmotion));
+
+            let score = 3;
+            if (maxEmotion === "happy") score = 5;
+            else if (maxEmotion === "neutral") score = 3;
+            else if (maxEmotion === "fearful" || maxEmotion === "sad") score = 1;
+            setBehaviorScore(score);
           }
         }
+      } catch (err) {
+        console.error("Face detection error:", err);
       }
-      // Emotion detection
-      if (detection && detection.expressions) {
-        const expressions = detection.expressions;
-        let maxEmotion = "neutral";
-        let maxValue = 0;
-        for (const emotion in expressions) {
-          if (expressions[emotion] > maxValue) {
-            maxValue = expressions[emotion];
-            maxEmotion = emotion;
-          }
-        }
-        setEmotion(maxEmotion);
-        // Behavioral insight
-        function interpretEmotion(emotion) {
-          if (emotion === "happy") return "Confident";
-          if (emotion === "neutral") return "Calm";
-          if (emotion === "fearful" || emotion === "sad") return "Nervous";
-          return "Neutral";
-        }
-        setBehavior(interpretEmotion(maxEmotion));
-        // Behavior score
-        let score = 0;
-        if (maxEmotion === "happy") score = 5;
-        else if (maxEmotion === "neutral") score = 3;
-        else if (maxEmotion === "fearful" || maxEmotion === "sad") score = 1;
-        else score = 3;
-        setBehaviorScore(score);
+
+      if (isMounted && !terminated && !completed) {
+        timeoutId = setTimeout(detect, 2000);
       }
-      setAlert("");
     }
-    interval = setInterval(detect, 2000);
-    return () => clearInterval(interval);
-  }, [sessionId, isAnalyzingFace, hasStarted]);
+
+    detect();
+
+    return () => {
+      isMounted = false;
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [sessionId, terminated, completed]);
 
   // Text-to-Speech
   function speak(text) {
@@ -350,7 +376,8 @@ ChartJS.register(
   // Speak question when it loads
   useEffect(() => {
     if (questions.length > 0 && questions[current]) {
-      speak(questions[current]);
+      const qText = typeof questions[current] === 'object' ? questions[current].question : questions[current];
+      speak(qText);
     }
   }, [questions, current]);
 
@@ -453,7 +480,8 @@ ChartJS.register(
   const submitAnswer = async () => {
     if (!answer.trim()) return;
     setLoading(true);
-    await evaluateAnswer(questions[current], answer);
+    const qText = typeof questions[current] === 'object' ? questions[current].question : questions[current];
+    await evaluateAnswer(qText, answer);
     setLoading(false);
     // Auto next question after short delay
     setTimeout(() => {
@@ -619,7 +647,7 @@ ChartJS.register(
               
               <h2 className="text-2xl font-bold text-slate-900 leading-tight">
                 {questions.length > 0 && hasStarted 
-                  ? questions[current] 
+                  ? (typeof questions[current] === 'object' ? questions[current].question : questions[current])
                   : isAnalyzingFace 
                     ? "Please look directly at the camera to begin your assessment." 
                     : "Initialize the interview to receive your first technical question."}
