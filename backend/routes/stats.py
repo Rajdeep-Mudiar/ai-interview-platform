@@ -33,7 +33,8 @@ async def get_candidate_stats(user_id: str):
             "status": "Not Started",
             "percentile": "—",
             "timeTaken": "—",
-            "lastScore": 0
+            "lastScore": 0,
+            "history": []
         }
     
     latest = user_results[0]
@@ -44,10 +45,23 @@ async def get_candidate_stats(user_id: str):
     count_below = sum(1 for s in all_scores if s < latest["overallScore"])
     percentile = round((count_below / len(all_scores)) * 100) if all_scores else 0
     
+    # Format history for frontend
+    history = []
+    for res in user_results:
+        history.append({
+            "id": str(res["_id"]),
+            "date": str(res.get("_id").generation_time.date()) if hasattr(res.get("_id"), "generation_time") else "Unknown",
+            "score": res.get("overallScore", 0),
+            "time": f"{res.get('timeTaken', 0)}m",
+            "integrity": res.get("integrity", 0),
+            "status": "Completed"
+        })
+
     return {
         "status": "Completed",
         "percentile": f"Top {100 - percentile}%",
         "betterThan": count_below,
         "timeTaken": f"{latest.get('timeTaken', 0)}m",
-        "lastScore": latest.get("overallScore", 0)
+        "lastScore": latest.get("overallScore", 0),
+        "history": history
     }

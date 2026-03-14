@@ -74,19 +74,22 @@ function InterviewFlow() {
 
     setBusy(true);
     try {
-      await axiosClient.post("/interview", {
+      const interviewData = {
         user_id: session.id,
         name: session.name,
         resume: resumeText,
         jd: jd,
-        fit_score: match.fit_score,
-        overallScore: match.fit_score, 
+        fit_score: Math.round(match.fit_score),
+        overallScore: Math.round(match.fit_score), 
         timeTaken: Math.floor(Math.random() * 15) + 15, 
         integrity: 100, 
         missing_skills: match.missing_skills,
-        questions: [], // No questions required
+        questions: [], 
         suggestions: suggestions,
-      });
+      };
+      
+      console.log("Saving interview data:", interviewData);
+      await axiosClient.post("/interview", interviewData);
       alert("Interview results saved to database!");
     } catch (err) {
       console.error("Failed to save interview:", err);

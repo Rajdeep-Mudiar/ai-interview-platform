@@ -10,9 +10,13 @@ function Dashboard() {
   const [candidates, setCandidates] = useState([]);
 
   useEffect(() => {
+    let isMounted = true;
     axiosClient.get("/leaderboard").then((res) => {
-      setCandidates(res.data);
+      if (isMounted) setCandidates(res.data);
+    }).catch(err => {
+      console.error("Leaderboard fetch failed:", err);
     });
+    return () => { isMounted = false; };
   }, []);
   const [result, setResult] = useState(null);
   const [explanation, setExplanation] = useState([]);
@@ -21,18 +25,28 @@ function Dashboard() {
     status: "Not Started",
     percentile: "—",
     timeTaken: "—",
-    lastScore: 0
+    lastScore: 0,
+    history: []
   });
   const session = getUserSession();
   const displayName = session?.name || "Candidate";
 
   useEffect(() => {
     if (session?.id) {
-      axiosClient.get(`/stats/candidate/${session.id}`).then((res) => {
-        setUserStats(res.data);
-      });
+      const fetchStats = () => {
+        axiosClient.get(`/stats/candidate/${session.id}`).then((res) => {
+          setUserStats(res.data);
+        }).catch(err => {
+          console.error("Failed to fetch candidate stats:", err);
+        });
+      };
+      
+      fetchStats();
+      // Only poll every 30 seconds if needed, but not immediately and repeatedly
+      const interval = setInterval(fetchStats, 30000);
+      return () => clearInterval(interval);
     }
-  }, [session]);
+  }, [session?.id]);
 
   const generateReport = async () => {
     if (!userStats.lastScore) {
@@ -149,6 +163,67 @@ function Dashboard() {
             </CardHeader>
             <CardBody className="p-0">
               <Leaderboard candidates={candidates} />
+            </CardBody>
+          </Card>
+
+          <Card className="overflow-hidden border-none shadow-sm ring-1 ring-slate-200">
+            <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center text-white">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900">Your Interview History</h2>
+                  <p className="text-sm text-slate-500">Review your past performance and growth trends.</p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardBody className="p-0">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-slate-100">
+                  <thead className="bg-slate-50/30">
+                    <tr className="text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      <th className="py-3 px-6">Attempt Date</th>
+                      <th className="py-3 px-6 text-center">Score</th>
+                      <th className="py-3 px-6 text-center">Time</th>
+                      <th className="py-3 px-6 text-center">Integrity</th>
+                      <th className="py-3 px-6">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {userStats.history.map((item) => (
+                      <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="py-4 px-6 text-sm font-medium text-slate-700">{item.date}</td>
+                        <td className="py-4 px-6 text-center">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-900 text-white">
+                            {item.score}%
+                          </span>
+                        </td>
+                        <td className="py-4 px-6 text-center text-sm text-slate-500">{item.time}</td>
+                        <td className="py-4 px-6 text-center">
+                          <span className={`text-xs font-bold ${item.integrity > 90 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                            {item.integrity}%
+                          </span>
+                        </td>
+                        <td className="py-4 px-6">
+                          <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-[10px] font-bold text-blue-700 ring-1 ring-inset ring-blue-700/10">
+                            {item.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                    {userStats.history.length === 0 && (
+                      <tr>
+                        <td colSpan="5" className="py-10 text-center text-sm text-slate-400 italic">
+                          No interview history found. Complete your first interview to see results here.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </CardBody>
           </Card>
         </div>

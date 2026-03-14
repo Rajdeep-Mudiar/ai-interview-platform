@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import axiosClient from "../utils/axiosClient";
 import { Card, CardHeader, CardBody } from "../components/ui/Card";
 import Button from "../components/ui/Button";
 
@@ -10,26 +10,26 @@ function Report() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
     const fetchSessions = async () => {
       try {
-        // In a real app, we'd have a route to list all sessions
-        // For now, let's assume we can fetch sessions from a new endpoint
-        const res = await axios.get("http://localhost:8000/monitoring/sessions/list");
-        setSessions(res.data);
+        const res = await axiosClient.get("/monitoring/sessions/list");
+        if (isMounted) setSessions(res.data);
       } catch (err) {
         console.error("Error fetching sessions:", err);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
     fetchSessions();
+    return () => { isMounted = false; };
   }, []);
 
   const viewLogs = async (sessionId) => {
     try {
       const [sessionRes, logsRes] = await Promise.all([
-        axios.get(`http://localhost:8000/monitoring/sessions/${sessionId}`),
-        axios.get(`http://localhost:8000/monitoring/sessions/${sessionId}/logs`)
+        axiosClient.get(`/monitoring/sessions/${sessionId}`),
+        axiosClient.get(`/monitoring/sessions/${sessionId}/logs`)
       ]);
       setSelectedSession(sessionRes.data);
       setLogs(logsRes.data);
