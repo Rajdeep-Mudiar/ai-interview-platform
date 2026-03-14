@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useLocation } from "react-router-dom";
 import axiosClient, { aiClient, secondaryAiClient } from "../utils/axiosClient";
 import * as faceapi from "face-api.js";
 import Button from "../components/ui/Button";
@@ -70,6 +70,7 @@ ChartJS.register(
 
   function Interview(props) {
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const jobId = searchParams.get("jobId");
   const videoRef = useRef(null);
   const streamRef = useRef(null);
@@ -88,6 +89,19 @@ ChartJS.register(
   const [behavior, setBehavior] = useState(null);
   const [behaviorScore, setBehaviorScore] = useState(0);
   const [terminated, setTerminated] = useState(false);
+  const [completed, setCompleted] = useState(false);
+  const [isFaceDetected, setIsFaceDetected] = useState(false);
+  const [isAnalyzingFace, setIsAnalyzingFace] = useState(false);
+  const [hasStarted, setHasStarted] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+
+  useEffect(() => {
+    // If we have skills passed from ResumeAnalysis, auto-initialize
+    if (location.state?.skills && location.state.skills.length > 0 && questions.length === 0 && !loading) {
+      console.log("Auto-initializing interview with skills:", location.state.skills);
+      loadQuestions(location.state.skills);
+    }
+  }, [location.state, questions.length, loading]);
 
   // Start/Stop Python AI services
   async function startPythonAIServices() {
@@ -115,6 +129,7 @@ ChartJS.register(
   // Load questions from backend based on skills
   async function loadQuestions(skills) {
     setLoading(true);
+    setIsAnalyzingFace(true);
     try {
       const res = await axiosClient.post("/generate-questions", {
         skills: skills,
@@ -125,21 +140,65 @@ ChartJS.register(
       setScore(null);
       setConcepts([]);
       setAnswer("");
-      // Trigger Python AI services when questions are loaded (interview starts)
-      startPythonAIServices();
     } catch (err) {
       console.error("Failed to load questions:", err);
+      setIsAnalyzingFace(false);
     } finally {
       setLoading(false);
     }
   }
+
+  // Monitor face detection to start the interview
+  useEffect(() => {
+    if (isAnalyzingFace && isFaceDetected && !hasStarted) {
+      const timer = setTimeout(() => {
+        setIsAnalyzingFace(false);
+        setHasStarted(true);
+        // Trigger Python AI services when face is confirmed and interview actually starts
+        startPythonAIServices();
+      }, 2000); // Small delay for "Analyzing" feel
+      return () => clearTimeout(timer);
+    }
+  }, [isAnalyzingFace, isFaceDetected, hasStarted]);
   // Interview timer
   useEffect(() => {
-    if (integrity === 0) {
-      stopPythonAIServices();
-      setTerminated(true);
+    if (integrity <= 0 && !terminated && !completed) {
+      handleInterviewEnd("terminated");
     }
   }, [integrity]);
+
+  const handleInterviewEnd = async (status) => {
+    stopPythonAIServices();
+    if (status === "terminated") {
+      setTerminated(true);
+    } else {
+      setCompleted(true);
+    }
+
+    // Save full interview results including status
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    try {
+      await axiosClient.post("/interview", {
+        user_id: user.id,
+        name: user.name,
+        job_id: jobId,
+        session_id: sessionId,
+        resume: "", 
+        jd: "",     
+        fit_score: 0,
+        overallScore: 0, 
+        timeTaken: 15,
+        integrity: integrity,
+        status: status, // "completed" or "terminated"
+        missing_skills: [],
+        questions: questions,
+        suggestions: []
+      });
+      console.log(`Interview ${status} and saved.`);
+    } catch (err) {
+      console.error("Failed to save interview results:", err);
+    }
+  };
 
   useEffect(() => {
     async function loadModels() {
@@ -177,6 +236,7 @@ ChartJS.register(
         new faceapi.TinyFaceDetectorOptions(),
       );
       if (detections.length > 1) {
+        setIsFaceDetected(false);
         setAlert("Multiple faces detected!");
         setIntegrity((prev) => Math.max(prev - 15, 0));
         if (sessionId) {
@@ -191,10 +251,13 @@ ChartJS.register(
       }
       // No face
       if (detections.length === 0) {
+        setIsFaceDetected(false);
         setAlert("No face detected");
         setIntegrity((prev) => Math.max(prev - 5, 0));
         return;
       }
+
+      setIsFaceDetected(true);
       // Looking away & emotion detection
       const detection = await faceapi
         .detectSingleFace(
@@ -295,9 +358,23 @@ ChartJS.register(
     }
   };
 
-  // Example: call with static skills for demo
-  const generate = () => {
-    loadQuestions(["python", "react", "sql"]);
+  // Initialize interview with relevant skills
+  const generate = async () => {
+    if (location.state?.skills) {
+      loadQuestions(location.state.skills);
+    } else if (jobId) {
+      // Fallback: fetch job to get title/description if no state passed
+      try {
+        const res = await axiosClient.get(`/jobs/${jobId}`);
+        // Use job title as a primary skill focus
+        loadQuestions([res.data.title]);
+      } catch (err) {
+        console.error("Failed to fetch job for skills:", err);
+        loadQuestions(["General Technical"]);
+      }
+    } else {
+      loadQuestions(["General Technical"]);
+    }
   };
 
   // Expose loadQuestions for parent/other pages
@@ -312,13 +389,45 @@ ChartJS.register(
       alert("Speech recognition not supported in this browser.");
       return;
     }
+    
+    if (isRecording) {
+      // Toggle off if already recording (manual stop)
+      setIsRecording(false);
+      return;
+    }
+
     const recognition = new SpeechRecognition();
-    recognition.continuous = false;
+    recognition.continuous = true;
+    recognition.interimResults = true;
     recognition.lang = "en-US";
-    recognition.onresult = (event) => {
-      const transcript = event.results[0][0].transcript;
-      setAnswer(transcript);
+
+    recognition.onstart = () => {
+      setIsRecording(true);
+      console.log("Voice recording started...");
     };
+
+    recognition.onresult = (event) => {
+      let finalTranscript = "";
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript;
+        }
+      }
+      if (finalTranscript) {
+        setAnswer((prev) => prev + (prev ? " " : "") + finalTranscript);
+      }
+    };
+
+    recognition.onerror = (event) => {
+      console.error("Speech recognition error:", event.error);
+      setIsRecording(false);
+    };
+
+    recognition.onend = () => {
+      setIsRecording(false);
+      console.log("Voice recording ended.");
+    };
+
     recognition.start();
   }
 
@@ -337,7 +446,10 @@ ChartJS.register(
 
   // Submit answer and get evaluation
   const submitAnswer = async () => {
+    if (!answer.trim()) return;
+    setLoading(true);
     await evaluateAnswer(questions[current], answer);
+    setLoading(false);
     // Auto next question after short delay
     setTimeout(() => {
       nextQuestion();
@@ -355,30 +467,8 @@ ChartJS.register(
     } else {
       // Interview finished
       setProgress(100);
-      stopPythonAIServices();
-      
-      // Save full interview results including session_id for backend to link logs
-      const user = JSON.parse(localStorage.getItem("user") || "{}");
-      try {
-        await axiosClient.post("/interview", {
-          user_id: user.id,
-          name: user.name,
-          job_id: jobId,
-          session_id: sessionId,
-          resume: "", // Not available here directly
-          jd: "",     // Not available here directly
-          fit_score: 0,
-          overallScore: 0, // Should be calculated
-          timeTaken: 15,
-          integrity: integrity,
-          missing_skills: [],
-          questions: questions,
-          suggestions: []
-        });
-        alert("Interview submitted successfully!");
-      } catch (err) {
-        console.error("Failed to save interview results:", err);
-      }
+      handleInterviewEnd("completed");
+      alert("Interview completed successfully!");
     }
   };
 
@@ -434,6 +524,22 @@ ChartJS.register(
                 muted
                 className="h-full w-full object-cover grayscale-[20%] group-hover:grayscale-0 transition-all duration-500"
               />
+
+              {/* Face Analysis Overlay */}
+              {isAnalyzingFace && !hasStarted && (
+                <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md flex flex-col items-center justify-center z-20">
+                  <div className="relative">
+                    <div className="w-24 h-24 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin mb-6"></div>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <TargetIcon className="w-8 h-8 text-blue-500 animate-pulse" />
+                    </div>
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-2">Analyzing Face</h3>
+                  <p className="text-blue-200/60 text-sm font-medium animate-pulse">
+                    {isFaceDetected ? "Face Detected. Calibrating..." : "Please position your face in the frame"}
+                  </p>
+                </div>
+              )}
               
               {/* Overlay UI */}
               <div className="absolute top-4 left-4 flex flex-col gap-2">
@@ -497,32 +603,39 @@ ChartJS.register(
             <CardHeader className="bg-slate-50/50 p-8 border-b border-slate-100">
               <div className="flex items-center justify-between mb-6">
                 <div className="px-4 py-1.5 rounded-full bg-slate-900 text-white text-[10px] font-bold uppercase tracking-widest">
-                  Question {current + 1} of {questions.length || "?"}
+                  {questions.length > 0 && hasStarted ? `Question ${current + 1} of ${questions.length}` : "Awaiting Verification"}
                 </div>
                 <div className="flex gap-1">
-                  {questions.map((_, i) => (
-                    <div key={i} className={`h-1 w-6 rounded-full transition-all duration-500 ${i <= current ? 'bg-blue-600' : 'bg-slate-200'}`}></div>
+                  {(questions.length > 0 && hasStarted ? questions : [1,2,3,4,5]).map((_, i) => (
+                    <div key={i} className={`h-1 w-6 rounded-full transition-all duration-500 ${hasStarted && i <= current ? 'bg-blue-600' : 'bg-slate-200'}`}></div>
                   ))}
                 </div>
               </div>
               
               <h2 className="text-2xl font-bold text-slate-900 leading-tight">
-                {questions.length > 0 ? questions[current] : "Initialize the interview to receive your first technical question."}
+                {questions.length > 0 && hasStarted 
+                  ? questions[current] 
+                  : isAnalyzingFace 
+                    ? "Please look directly at the camera to begin your assessment." 
+                    : "Initialize the interview to receive your first technical question."}
               </h2>
             </CardHeader>
             
             <CardBody className="p-8">
-              {questions.length > 0 ? (
+              {questions.length > 0 && hasStarted ? (
                 <div className="space-y-6">
                   <div className="relative">
                     <textarea
-                      className="w-full min-h-[200px] p-6 rounded-2xl bg-slate-50 ring-1 ring-slate-200 focus:ring-2 focus:ring-blue-600 outline-none transition-all text-lg font-medium text-slate-700 placeholder:text-slate-300 resize-none"
-                      placeholder="Your answer will appear here via voice recognition..."
+                      className={`w-full min-h-[200px] p-6 rounded-2xl bg-slate-50 ring-1 ring-slate-200 focus:ring-2 focus:ring-blue-600 outline-none transition-all text-lg font-medium text-slate-700 placeholder:text-slate-300 resize-none ${isRecording ? 'ring-blue-400 ring-2' : ''}`}
+                      placeholder="Your answer will appear here via voice recognition, or you can type directly..."
                       value={answer}
-                      readOnly
+                      onChange={(e) => setAnswer(e.target.value)}
                     />
                     <div className="absolute bottom-4 right-4 flex gap-2">
-                      <Button onClick={startRecording} className="h-12 w-12 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/40 hover:scale-105 active:scale-95 transition-all">
+                      <Button 
+                        onClick={startRecording} 
+                        className={`h-12 w-12 rounded-full flex items-center justify-center shadow-lg transition-all ${isRecording ? 'bg-red-500 shadow-red-500/40 animate-pulse' : 'bg-blue-600 shadow-blue-500/40 hover:scale-105 active:scale-95'}`}
+                      >
                         <MicIcon />
                       </Button>
                     </div>
@@ -549,10 +662,23 @@ ChartJS.register(
                   <div className="w-16 h-16 rounded-2xl bg-white flex items-center justify-center mx-auto mb-6 shadow-sm text-slate-300">
                     <SparklesIcon />
                   </div>
-                  <h3 className="text-lg font-bold text-slate-900 mb-2">Ready to showcase your skills?</h3>
-                  <p className="text-sm text-slate-500 leading-relaxed max-w-xs mx-auto">
-                    Click the button above to start your AI-led technical assessment. Make sure your camera and microphone are properly configured.
+                  <h3 className="text-lg font-bold text-slate-900 mb-2">
+                    {!isAnalyzingFace && questions.length === 0 ? "Ready to showcase your skills?" : "Starting Interview..."}
+                  </h3>
+                  <p className="text-sm text-slate-500 leading-relaxed max-w-xs mx-auto mb-6">
+                    {!isAnalyzingFace && questions.length === 0 
+                      ? "Click the button above to start your AI-led technical assessment. Make sure your camera and microphone are properly configured." 
+                      : "The AI is currently calibrating your camera and preparing your technical questions."}
                   </p>
+                  
+                  {isAnalyzingFace && (
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="w-12 h-12 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin"></div>
+                      <span className="text-xs font-bold text-blue-600 uppercase tracking-widest animate-pulse">
+                        {isFaceDetected ? "Face Confirmed. Initializing..." : "Detecting Face..."}
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
             </CardBody>

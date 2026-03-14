@@ -145,7 +145,12 @@ function ResumeAnalysis() {
       await axiosClient.post("/interview", interviewData);
       setShowSuccess(true);
       setTimeout(() => {
-        navigate("/dashboard");
+        navigate(`/interview?jobId=${selectedJob.id}`, {
+          state: {
+            skills: match.matched_skills || [],
+            jobTitle: selectedJob.title
+          }
+        });
       }, 3000);
     } catch (err) {
       console.error("Failed to save analysis:", err);
@@ -168,7 +173,7 @@ function ResumeAnalysis() {
               <CheckIcon />
             </div>
             <h2 className="text-2xl font-bold text-slate-900 mb-2">Analysis Complete!</h2>
-            <p className="text-slate-500 mb-8">Your interview results have been securely saved to your dashboard.</p>
+            <p className="text-slate-500 mb-8">Your analysis is ready. Starting your AI technical interview now...</p>
             <div className="flex flex-col gap-2">
               <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
                 <motion.div 
@@ -178,7 +183,7 @@ function ResumeAnalysis() {
                   className="h-full bg-blue-600"
                 />
               </div>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Redirecting to Dashboard</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Entering Interview Room</span>
             </div>
           </motion.div>
         </div>
@@ -271,7 +276,7 @@ function ResumeAnalysis() {
                   disabled={busy} 
                   className="w-full bg-blue-600 hover:bg-blue-700 h-12 font-bold mt-2"
                 >
-                  {busy ? "Processing..." : "Save Analysis Results"}
+                  {busy ? "Processing..." : "Proceed to Interview"}
                 </Button>
               </div>
             </Card>

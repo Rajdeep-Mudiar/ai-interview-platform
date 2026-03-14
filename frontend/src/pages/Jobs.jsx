@@ -21,6 +21,7 @@ const getDeadlineInfo = (deadline) => {
 
 export default function Jobs() {
   const [jobs, setJobs] = useState([]);
+  const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const session = getUserSession();
@@ -39,18 +40,25 @@ export default function Jobs() {
   );
 
   useEffect(() => {
-    async function loadJobs() {
+    async function loadData() {
       try {
         const params = isRecruiter ? { recruiter_id: session.id } : {};
-        const res = await axiosClient.get("/jobs", { params });
-        setJobs(res.data);
+        const [jobsRes, resultsRes] = await Promise.all([
+          axiosClient.get("/jobs", { params }),
+          !isRecruiter ? axiosClient.get(`/stats/candidate/${session.id}`) : Promise.resolve({ data: { history: [] } })
+        ]);
+        
+        setJobs(jobsRes.data);
+        if (!isRecruiter) {
+          setResults(resultsRes.data.history || []);
+        }
       } catch (err) {
         console.error("Failed to load jobs:", err);
       } finally {
         setLoading(false);
       }
     }
-    loadJobs();
+    loadData();
   }, []);
 
   const filteredJobs = jobs.filter(job => 
@@ -118,6 +126,12 @@ export default function Jobs() {
           
           {filteredJobs.map((job, index) => {
             const deadlineInfo = getDeadlineInfo(job.deadline);
+            const userResult = results.find(r => r.job_id === job.id);
+            const statusLabel = userResult ? userResult.status : "Active";
+            const statusColor = statusLabel === "terminated" ? "bg-rose-50 text-rose-700 border-rose-100" : 
+                               statusLabel === "completed" ? "bg-emerald-50 text-emerald-700 border-emerald-100" : 
+                               "bg-emerald-50 text-emerald-700 border-emerald-100";
+            
             return (
               <motion.div
                 key={job.id}
@@ -133,8 +147,8 @@ export default function Jobs() {
                         <BriefcaseIcon />
                       </div>
                       <div className="flex flex-col items-end gap-2">
-                        <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase tracking-wider border border-emerald-100">
-                          Active
+                        <span className={cn("px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border", statusColor)}>
+                          {statusLabel === "terminated" ? "Interview Terminated" : statusLabel}
                         </span>
                         {deadlineInfo && (
                           <span className={cn("px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border", deadlineInfo.color)}>
@@ -175,14 +189,17 @@ export default function Jobs() {
                         variant="secondary"
                         className="flex-1 text-xs font-bold"
                       >
-                        Analyze Fit
+                        {userResult ? "Re-analyze" : "Analyze Fit"}
                       </Button>
                       <Button
                         as={Link}
                         to={`/interview?jobId=${job.id}`}
-                        className="flex-1 text-xs font-bold shadow-md shadow-blue-500/10"
+                        className={cn(
+                          "flex-1 text-xs font-bold shadow-md",
+                          userResult ? "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/10" : "bg-blue-600 hover:bg-blue-700 shadow-blue-500/10"
+                        )}
                       >
-                        Start Interview
+                        {userResult ? "Reapply" : "Start Interview"}
                       </Button>
                     </div>
                   </CardBody>

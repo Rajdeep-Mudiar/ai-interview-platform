@@ -17,6 +17,7 @@ class Interview(BaseModel):
     overallScore: int
     timeTaken: int
     integrity: int
+    status: str = "completed" # completed | terminated
     suspicious_activities: List[dict] = []
     missing_skills: list
     questions: list

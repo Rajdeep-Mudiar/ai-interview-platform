@@ -64,11 +64,12 @@ async def get_candidate_stats(user_id: str):
     for res in user_results:
         history.append({
             "id": str(res["_id"]),
+            "job_id": res.get("job_id"),
             "date": str(res.get("_id").generation_time.date()) if hasattr(res.get("_id"), "generation_time") else "Unknown",
             "score": res.get("overallScore", 0),
             "time": f"{res.get('timeTaken', 0)}m",
             "integrity": res.get("integrity", 0),
-            "status": "Completed"
+            "status": res.get("status", "Completed")
         })
 
     return {
