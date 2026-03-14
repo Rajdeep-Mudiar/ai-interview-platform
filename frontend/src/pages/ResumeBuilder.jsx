@@ -95,6 +95,24 @@ export default function ResumeBuilder() {
   const [showPreview, setShowPreview] = useState(false);
   const resumeRef = useRef();
 
+  const SparklesIcon = () => (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+    </svg>
+  );
+
+  const CheckIcon = () => (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+    </svg>
+  );
+
+  const PrinterIcon = () => (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+    </svg>
+  );
+
   const handleInputChange = (section, field, value, index = null) => {
     setResumeData((prev) => {
       if (index !== null) {
@@ -210,15 +228,15 @@ export default function ResumeBuilder() {
     };
 
     return (
-      <div key={field.id} className="space-y-2">
+      <div key={field.id} className="space-y-3">
         <div className="flex justify-between items-center">
-          <Label>{field.label}</Label>
+          <Label className="text-sm font-bold text-slate-700 tracking-tight">{field.label}</Label>
           {(field.ai_generate || field.ai_optimize) && (
             <button
               onClick={handleAIOptimize}
-              className="text-xs font-medium text-blue-600 hover:text-blue-700 flex items-center gap-1"
+              className="text-[10px] font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 bg-blue-50 px-2 py-1 rounded-lg border border-blue-100 transition-all hover:shadow-sm"
             >
-              <span className="text-lg">✨</span> {field.ai_generate ? "AI Generate" : "AI Optimize"}
+              <SparklesIcon /> {field.ai_generate ? "AI Generate" : "AI Optimize"}
             </button>
           )}
         </div>
@@ -226,14 +244,15 @@ export default function ResumeBuilder() {
           <Textarea
             value={value}
             onChange={onChange}
-            className="min-h-[100px]"
-            placeholder={field.examples ? `e.g. ${field.examples.join(", ")}` : ""}
+            className="min-h-[120px] rounded-2xl border-slate-200 focus:ring-blue-500/20 text-sm leading-relaxed"
+            placeholder={field.examples ? `e.g. ${field.examples.join(", ")}` : "Describe your role and impact..."}
           />
         ) : (
           <Input
             type={field.type}
             value={value}
             onChange={onChange}
+            className="h-12 rounded-2xl border-slate-200 focus:ring-blue-500/20 text-sm font-medium"
             placeholder={field.examples ? `e.g. ${field.examples.join(", ")}` : ""}
           />
         )}
@@ -244,55 +263,111 @@ export default function ResumeBuilder() {
   const currentSection = INTERVIEW_FLOW[currentStep];
 
   return (
-    <div className="cb-container py-10">
+    <div className="cb-container py-10 sm:py-16">
       <div className="max-w-4xl mx-auto">
+        {!showPreview && (
+          <div className="mb-10">
+            <div className="flex justify-between items-end mb-4">
+              <div>
+                <h1 className="text-3xl font-extrabold text-slate-900">Resume Builder</h1>
+                <p className="text-slate-500 mt-1">Fill in your details to create a professional, ATS-friendly resume.</p>
+              </div>
+              <div className="text-right">
+                <span className="text-sm font-bold text-blue-600 uppercase tracking-widest">
+                  Step {currentStep + 1} of {INTERVIEW_FLOW.length}
+                </span>
+              </div>
+            </div>
+            
+            {/* Progress Bar */}
+            <div className="relative h-2 w-full bg-slate-100 rounded-full overflow-hidden mb-8">
+              <div 
+                className="absolute top-0 left-0 h-full bg-blue-600 transition-all duration-500 ease-out"
+                style={{ width: `${((currentStep + 1) / INTERVIEW_FLOW.length) * 100}%` }}
+              />
+            </div>
+
+            {/* Step Indicators */}
+            <div className="hidden sm:flex justify-between">
+              {INTERVIEW_FLOW.map((step, idx) => (
+                <button
+                  key={step.section}
+                  onClick={() => setCurrentStep(idx)}
+                  className={cn(
+                    "flex flex-col items-center gap-2 group transition-all",
+                    idx <= currentStep ? "opacity-100" : "opacity-40 hover:opacity-60"
+                  )}
+                >
+                  <div className={cn(
+                    "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all",
+                    idx === currentStep ? "bg-blue-600 text-white ring-4 ring-blue-100" : 
+                    idx < currentStep ? "bg-emerald-500 text-white" : "bg-slate-200 text-slate-500"
+                  )}>
+                    {idx < currentStep ? <CheckIcon /> : idx + 1}
+                  </div>
+                  <span className={cn(
+                    "text-[10px] font-bold uppercase tracking-wider",
+                    idx === currentStep ? "text-blue-600" : "text-slate-500"
+                  )}>
+                    {step.title.split(' ')[0]}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {!showPreview ? (
-          <Card>
-            <CardHeader>
+          <Card className="border-none shadow-xl shadow-slate-200/50 ring-1 ring-slate-200 overflow-hidden rounded-[2rem]">
+            <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-8">
               <div className="flex justify-between items-center">
                 <div>
                   <h2 className="text-2xl font-bold text-slate-900">
                     {currentSection.title}
                   </h2>
-                  <p className="text-sm text-slate-500">
-                    Step {currentStep + 1} of {INTERVIEW_FLOW.length}
+                  <p className="text-sm text-slate-500 mt-1">
+                    Please provide your {currentSection.title.toLowerCase()} details below.
                   </p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-3">
                   <Button
                     variant="secondary"
                     onClick={prevStep}
                     disabled={currentStep === 0}
+                    className="rounded-xl"
                   >
-                    Previous
+                    Back
                   </Button>
-                  <Button onClick={nextStep}>
+                  <Button onClick={nextStep} className="rounded-xl shadow-md shadow-blue-500/20">
                     {currentStep === INTERVIEW_FLOW.length - 1
                       ? "Preview Resume"
-                      : "Next"}
+                      : "Continue"}
                   </Button>
                 </div>
               </div>
             </CardHeader>
-            <CardBody className="space-y-6">
+            <CardBody className="p-8 space-y-6">
               {currentSection.repeatable ? (
-                <div className="space-y-8">
+                <div className="space-y-10">
                   {resumeData[currentSection.section].map((_, index) => (
                     <div
                       key={index}
-                      className="p-4 border border-slate-200 rounded-lg relative bg-slate-50/50"
+                      className="p-8 border border-slate-200 rounded-[2rem] relative bg-white shadow-sm ring-1 ring-slate-100 transition-all hover:shadow-md"
                     >
+                      <div className="absolute -top-3 left-6 px-3 py-1 bg-blue-600 text-white text-[10px] font-bold uppercase tracking-widest rounded-full">
+                        {currentSection.title} #{index + 1}
+                      </div>
                       {resumeData[currentSection.section].length > 1 && (
                         <button
                           onClick={() =>
                             removeRepeatableField(currentSection.section, index)
                           }
-                          className="absolute top-2 right-2 text-red-500 hover:text-red-700 text-sm font-medium"
+                          className="absolute -top-3 right-6 px-3 py-1 bg-rose-50 text-rose-600 text-[10px] font-bold uppercase tracking-widest rounded-full border border-rose-100 hover:bg-rose-100 transition-colors"
                         >
                           Remove
                         </button>
                       )}
-                      <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="grid gap-6 sm:grid-cols-2">
                         {currentSection.fields.map((field) =>
                           renderField(field, currentSection.section, index)
                         )}
@@ -302,13 +377,13 @@ export default function ResumeBuilder() {
                   <Button
                     variant="secondary"
                     onClick={() => addRepeatableField(currentSection.section)}
-                    className="w-full border-dashed"
+                    className="w-full border-dashed border-2 py-6 rounded-[1.5rem] bg-slate-50 hover:bg-white hover:border-blue-400 hover:text-blue-600 transition-all font-bold"
                   >
-                    + Add {currentSection.title}
+                    + Add another {currentSection.title.toLowerCase()}
                   </Button>
                 </div>
               ) : (
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-6 sm:grid-cols-2">
                   {currentSection.fields.map((field) =>
                     renderField(field, currentSection.section)
                   )}
@@ -327,7 +402,7 @@ export default function ResumeBuilder() {
                   Back to Editor
                 </Button>
                 <Button variant="outline" onClick={handlePrint} className="flex items-center gap-2">
-                  <span>🖨️</span> Print to PDF (Best for ATS)
+                  <PrinterIcon /> Print to PDF (Best for ATS)
                 </Button>
                 <Button onClick={generatePDF}>Download PDF</Button>
               </div>

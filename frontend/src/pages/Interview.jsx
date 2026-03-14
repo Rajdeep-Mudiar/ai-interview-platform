@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import axiosClient, { aiClient, secondaryAiClient } from "../utils/axiosClient";
 import * as faceapi from "face-api.js";
 import Button from "../components/ui/Button";
@@ -25,7 +26,51 @@ ChartJS.register(
   Legend
 );
 
-function Interview(props) {
+  const CheckIcon = () => (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+    </svg>
+  );
+
+  const WarningIcon = () => (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+    </svg>
+  );
+
+  const TargetIcon = () => (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  );
+
+  const ClockIcon = () => (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  );
+
+  const SparklesIcon = () => (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+    </svg>
+  );
+
+  const ArrowRightIcon = () => (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+    </svg>
+  );
+
+  const MicIcon = () => (
+    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+    </svg>
+  );
+
+  function Interview(props) {
+  const [searchParams] = useSearchParams();
+  const jobId = searchParams.get("jobId");
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const [sessionId, setSessionId] = useState("");
@@ -311,6 +356,29 @@ function Interview(props) {
       // Interview finished
       setProgress(100);
       stopPythonAIServices();
+      
+      // Save full interview results including session_id for backend to link logs
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      try {
+        await axiosClient.post("/interview", {
+          user_id: user.id,
+          name: user.name,
+          job_id: jobId,
+          session_id: sessionId,
+          resume: "", // Not available here directly
+          jd: "",     // Not available here directly
+          fit_score: 0,
+          overallScore: 0, // Should be calculated
+          timeTaken: 15,
+          integrity: integrity,
+          missing_skills: [],
+          questions: questions,
+          suggestions: []
+        });
+        alert("Interview submitted successfully!");
+      } catch (err) {
+        console.error("Failed to save interview results:", err);
+      }
     }
   };
 
@@ -379,13 +447,14 @@ function Interview(props) {
                 <div className="px-3 py-1.5 rounded-xl bg-black/40 backdrop-blur-md border border-white/20">
                   <div className="text-[10px] font-bold text-white/60 uppercase mb-0.5">Emotion</div>
                   <div className="text-xs font-bold text-white flex items-center gap-2">
-                    {emotion === "happy" ? "😊 Positive" : emotion === "neutral" ? "😐 Composed" : emotion === "fearful" ? "😨 Nervous" : "⌛ Analyzing..."}
+                    {emotion === "happy" ? "Positive" : emotion === "neutral" ? "Composed" : emotion === "fearful" ? "Nervous" : "Analyzing..."}
                   </div>
                 </div>
                 <div className="px-3 py-1.5 rounded-xl bg-black/40 backdrop-blur-md border border-white/20 text-right">
                   <div className="text-[10px] font-bold text-white/60 uppercase mb-0.5">Focus</div>
-                  <div className="text-xs font-bold text-white">
-                    {integrity > 90 ? "🎯 Locked In" : "⚠️ Distracted"}
+                  <div className="text-xs font-bold text-white flex items-center gap-1.5 justify-end">
+                    {integrity > 90 ? <TargetIcon /> : <WarningIcon />}
+                    {integrity > 90 ? "Locked In" : "Distracted"}
                   </div>
                 </div>
               </div>
@@ -403,7 +472,7 @@ function Interview(props) {
             <div className="bg-white p-5 rounded-2xl ring-1 ring-slate-200 shadow-sm">
               <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Integrity Score</div>
               <div className="flex items-end gap-2">
-                <span className={`text-3xl font-bold ${integrity > 80 ? 'text-emerald-600' : 'text-amber-600'}`}>{integrity}%</span>
+                <span className={`text-3xl font-bold ${integrity > 80 ? 'text-emerald-600' : 'text-amber-600'}`}>{Math.round(integrity)}%</span>
                 <span className="text-xs text-slate-400 mb-1 font-medium">Global Avg: 88%</span>
               </div>
             </div>
@@ -414,7 +483,12 @@ function Interview(props) {
             </div>
           </div>
 
-          <DualMonitoring sessionId={sessionId} setSessionId={setSessionId} />
+          <DualMonitoring 
+            sessionId={sessionId} 
+            setSessionId={setSessionId} 
+            jobId={jobId} 
+            onIntegrityChange={(score) => setIntegrity(score)}
+          />
         </div>
 
         {/* Right Column: Question & Interaction */}
@@ -449,9 +523,7 @@ function Interview(props) {
                     />
                     <div className="absolute bottom-4 right-4 flex gap-2">
                       <Button onClick={startRecording} className="h-12 w-12 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/40 hover:scale-105 active:scale-95 transition-all">
-                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                        </svg>
+                        <MicIcon />
                       </Button>
                     </div>
                   </div>
@@ -468,18 +540,14 @@ function Interview(props) {
                     </div>
                     <Button onClick={submitAnswer} disabled={!answer || loading} className="h-12 px-8 bg-slate-900 text-white font-bold rounded-2xl hover:bg-slate-800 transition-all flex items-center gap-2">
                       Submit & Next
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                      </svg>
+                      <ArrowRightIcon />
                     </Button>
                   </div>
                 </div>
               ) : (
                 <div className="text-center py-12 px-10 border-2 border-dashed border-slate-100 rounded-3xl bg-slate-50/50">
                   <div className="w-16 h-16 rounded-2xl bg-white flex items-center justify-center mx-auto mb-6 shadow-sm text-slate-300">
-                    <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
+                    <SparklesIcon />
                   </div>
                   <h3 className="text-lg font-bold text-slate-900 mb-2">Ready to showcase your skills?</h3>
                   <p className="text-sm text-slate-500 leading-relaxed max-w-xs mx-auto">

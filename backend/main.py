@@ -104,6 +104,24 @@ def emotion(data: EmotionAnalysisRequest):
 
 @app.post("/interview")
 async def save_interview(interview: Interview):
-    from database.mongo import results_col
-    results_col.insert_one(interview.dict())
+    from database.mongo import results_col, db
+    # Fetch all activity logs for this session to include in the permanent record
+    suspicious_logs = []
+    if interview.session_id:
+        logs = list(db.activity_logs.find({
+            "session_id": interview.session_id,
+            "event": {"$nin": ["device_connected", "heartbeat"]}
+        }).sort("timestamp", 1))
+        for log in logs:
+            suspicious_logs.append({
+                "event": log["event"],
+                "device": log["device"],
+                "timestamp": str(log["timestamp"]),
+                "confidence": log.get("confidence_score", 1.0)
+            })
+    
+    interview_dict = interview.dict()
+    interview_dict["suspicious_activities"] = suspicious_logs
+    
+    results_col.insert_one(interview_dict)
     return {"message": "Interview saved successfully"}

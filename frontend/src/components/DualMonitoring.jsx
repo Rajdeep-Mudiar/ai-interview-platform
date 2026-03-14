@@ -3,7 +3,7 @@ import { QRCodeSVG } from "qrcode.react";
 import axiosClient from "../utils/axiosClient";
 import { Card, CardHeader, CardBody } from "./ui/Card";
 
-const DualMonitoring = ({ sessionId, setSessionId }) => {
+const DualMonitoring = ({ sessionId, setSessionId, jobId, onIntegrityChange }) => {
   const [mobileLink, setMobileLink] = useState("");
   const [alerts, setAlerts] = useState([]);
   const [isMobileConnected, setIsMobileConnected] = useState(false);
@@ -23,6 +23,7 @@ const DualMonitoring = ({ sessionId, setSessionId }) => {
         };
         const response = await axiosClient.post("/monitoring/sessions", {
           candidate_email: user.name || "candidate@example.com",
+          job_id: jobId,
           metadata: metadata
         });
         setSessionId(response.data.session_id);
@@ -35,7 +36,7 @@ const DualMonitoring = ({ sessionId, setSessionId }) => {
     if (!sessionId) {
       initializeSession();
     }
-  }, [sessionId, setSessionId]);
+  }, [sessionId, setSessionId, jobId]);
 
   // Fetch initial session data and logs
   useEffect(() => {
@@ -49,13 +50,16 @@ const DualMonitoring = ({ sessionId, setSessionId }) => {
           setSessionData(sessionRes.data);
           setIsMobileConnected(sessionRes.data.mobile_connected);
           setAlerts(logsRes.data.filter(log => log.event !== 'device_connected'));
+          if (onIntegrityChange && sessionRes.data.integrity_score !== undefined) {
+            onIntegrityChange(sessionRes.data.integrity_score);
+          }
         } catch (err) {
           console.error("Error fetching session data:", err);
         }
       };
       fetchData();
     }
-  }, [sessionId]);
+  }, [sessionId, onIntegrityChange]);
 
   // WebSocket for real-time alerts
   useEffect(() => {
@@ -68,7 +72,12 @@ const DualMonitoring = ({ sessionId, setSessionId }) => {
           setAlerts((prev) => [data.payload, ...prev].slice(0, 10));
           // Refresh session data to get updated integrity score
           axiosClient.get(`/monitoring/sessions/${sessionId}`)
-            .then(res => setSessionData(res.data));
+            .then(res => {
+              setSessionData(res.data);
+              if (onIntegrityChange) {
+                onIntegrityChange(res.data.integrity_score);
+              }
+            });
           
           if (Notification.permission === "granted") {
             new Notification("Suspicious Activity", { body: data.payload.message });

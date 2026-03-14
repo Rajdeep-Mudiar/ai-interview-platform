@@ -9,6 +9,12 @@ import Leaderboard from "../components/Leaderboard";
 function Dashboard() {
   const [candidates, setCandidates] = useState([]);
 
+  const ArrowRightIcon = () => (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+    </svg>
+  );
+
   useEffect(() => {
     let isMounted = true;
     axiosClient.get("/leaderboard").then((res) => {
@@ -16,8 +22,23 @@ function Dashboard() {
     }).catch(err => {
       console.error("Leaderboard fetch failed:", err);
     });
+
+    axiosClient.get("/jobs").then((res) => {
+      if (isMounted) {
+        // Filter jobs that have a deadline and are still active
+        const activeWithDeadline = res.data.filter(j => {
+          if (!j.deadline) return false;
+          const diff = new Date(j.deadline) - new Date();
+          return diff > 0 && diff < (7 * 24 * 60 * 60 * 1000); // 7 days
+        });
+        setUpcomingDeadlines(activeWithDeadline);
+      }
+    });
+
     return () => { isMounted = false; };
   }, []);
+
+  const [upcomingDeadlines, setUpcomingDeadlines] = useState([]);
   const [result, setResult] = useState(null);
   const [explanation, setExplanation] = useState([]);
   const [busy, setBusy] = useState(false);
@@ -30,6 +51,36 @@ function Dashboard() {
   });
   const session = getUserSession();
   const displayName = session?.name || "Candidate";
+
+  const ClockIcon = () => (
+    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  );
+
+  const TargetIcon = () => (
+    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  );
+
+  const ChartIcon = () => (
+    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+    </svg>
+  );
+
+  const TimerIcon = () => (
+    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  );
+
+  const TrophyIcon = () => (
+    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+    </svg>
+  );
 
   useEffect(() => {
     if (session?.id) {
@@ -123,17 +174,45 @@ function Dashboard() {
         </div>
       </div>
 
+      {upcomingDeadlines.length > 0 && (
+        <div className="mb-10 p-6 bg-amber-50 border border-amber-100 rounded-[2rem] flex flex-col sm:flex-row items-center gap-6 shadow-sm">
+          <div className="w-14 h-14 rounded-2xl bg-amber-100 flex items-center justify-center text-amber-600 shrink-0 shadow-inner">
+            <ClockIcon />
+          </div>
+          <div className="flex-grow text-center sm:text-left">
+            <h4 className="text-lg font-bold text-amber-900">Opportunities Closing Soon</h4>
+            <p className="text-sm text-amber-700 mt-1 font-medium">
+              {upcomingDeadlines.length} job{upcomingDeadlines.length > 1 ? 's are' : ' is'} nearing the application deadline. Don't miss your chance!
+            </p>
+            <div className="flex flex-wrap gap-2 mt-3 justify-center sm:justify-start">
+              {upcomingDeadlines.map(job => (
+                <span key={job.id} className="px-3 py-1 bg-white rounded-full text-[10px] font-bold text-amber-600 border border-amber-100 uppercase tracking-wider">
+                  {job.title}
+                </span>
+              ))}
+            </div>
+          </div>
+          <Button 
+            variant="secondary" 
+            onClick={() => window.location.href='/jobs'} 
+            className="bg-white text-amber-700 border-amber-200 hover:bg-amber-100 h-12 px-8 rounded-xl font-bold"
+          >
+            Apply Now
+          </Button>
+        </div>
+      )}
+
       {/* Stats Grid */}
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-10">
         {[
-          { label: "Overall Status", value: userStats.status, icon: "🎯", color: "blue" },
-          { label: "Technical Percentile", value: userStats.percentile, icon: "📊", color: "emerald" },
-          { label: "Avg. Interview Time", value: userStats.timeTaken, icon: "⏱️", color: "amber" },
-          { label: "Latest Score", value: `${userStats.lastScore}%`, icon: "🏆", color: "indigo" }
+          { label: "Overall Status", value: userStats.status, icon: <TargetIcon />, color: "blue" },
+          { label: "Technical Percentile", value: userStats.percentile, icon: <ChartIcon />, color: "emerald" },
+          { label: "Avg. Interview Time", value: userStats.timeTaken, icon: <TimerIcon />, color: "amber" },
+          { label: "Latest Score", value: `${userStats.lastScore}%`, icon: <TrophyIcon />, color: "indigo" }
         ].map((stat, i) => (
           <div key={i} className="bg-white p-6 rounded-2xl shadow-sm ring-1 ring-slate-200 hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between mb-4">
-              <div className={`w-10 h-10 rounded-xl bg-${stat.color}-50 flex items-center justify-center text-xl`}>
+              <div className={`w-10 h-10 rounded-xl bg-${stat.color}-50 text-${stat.color}-600 flex items-center justify-center`}>
                 {stat.icon}
               </div>
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Live Metric</span>
@@ -255,8 +334,8 @@ function Dashboard() {
                     </svg>
                   </div>
                   <p className="text-sm text-slate-600 font-medium">No insights requested yet.</p>
-                  <button onClick={getExplanation} className="mt-4 text-sm font-bold text-blue-600 hover:text-blue-500 transition-colors">
-                    Analyze my performance →
+                  <button onClick={getExplanation} className="mt-4 text-sm font-bold text-blue-600 hover:text-blue-500 transition-colors flex items-center justify-center gap-1 mx-auto">
+                    Analyze my performance <ArrowRightIcon />
                   </button>
                 </div>
               )}

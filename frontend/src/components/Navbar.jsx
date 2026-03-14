@@ -4,13 +4,18 @@ import Button from "./ui/Button";
 import { cn } from "./ui/cn";
 import { getUserSession, clearUserSession } from "../utils/auth";
 
-const baseNavItems = [
+const candidateNavItems = [
   { to: "/", label: "Home" },
   { to: "/jobs", label: "Jobs" },
   { to: "/resume-analysis", label: "Resume Analysis" },
   { to: "/resume-builder", label: "Resume Builder" },
-  { to: "/interview-flow", label: "Interview Pipeline" },
   { to: "/dashboard", label: "Candidate Dashboard" },
+];
+
+const recruiterNavItems = [
+  { to: "/", label: "Home" },
+  { to: "/recruiter-dashboard", label: "Dashboard" },
+  { to: "/candidates", label: "Candidates" },
 ];
 
 function NavItem({ to, children, onClick }) {
@@ -40,13 +45,7 @@ export default function Navbar() {
     window.location.href = "/login";
   };
 
-  const navItems = isRecruiter
-    ? [
-        ...baseNavItems,
-        { to: "/my-jobs", label: "My Jobs" },
-        { to: "/recruiter-dashboard", label: "Recruiter Dashboard" },
-      ]
-    : baseNavItems;
+  const navItems = isRecruiter ? recruiterNavItems : candidateNavItems;
 
   return (
     <header className="cb-navbar">

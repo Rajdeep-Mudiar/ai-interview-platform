@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from datetime import datetime
 import uuid
 from typing import Dict, List, Optional
+from bson import ObjectId
 from pipeline_db import db, Session, ActivityLog
 
 router = APIRouter(prefix="/monitoring", tags=["monitoring"])
@@ -13,6 +14,7 @@ active_connections: Dict[str, List[WebSocket]] = {}
 
 class SessionCreate(BaseModel):
     candidate_email: str
+    job_id: Optional[str] = None
     metadata: Optional[dict] = {}
 
 class AIEvent(BaseModel):
@@ -31,6 +33,7 @@ async def create_session(data: SessionCreate):
     session_id = str(uuid.uuid4())
     session = Session(
         session_id=session_id,
+        job_id=data.job_id,
         candidate_email=data.candidate_email,
         desktop_connected=True,
         mobile_connected=False,
@@ -90,15 +93,39 @@ async def mobile_connect(data: MobileConnect):
     return {"status": "connected"}
 
 @router.get("/sessions/list")
-async def list_sessions():
-    sessions = list(db.sessions.find().sort("start_time", -1))
+async def list_sessions(recruiter_id: Optional[str] = None):
+    query = {}
+    if recruiter_id:
+        # Find all jobs by this recruiter
+        jobs = list(db.jobs.find({"recruiter_id": recruiter_id}, {"_id": 1, "title": 1}))
+        job_map = {str(j["_id"]): j["title"] for j in jobs}
+        job_ids = list(job_map.keys())
+        query["job_id"] = {"$in": job_ids}
+        
+    sessions = list(db.sessions.find(query).sort("start_time", -1))
     for s in sessions:
         s["_id"] = str(s["_id"])
+        if recruiter_id:
+            s["job_title"] = job_map.get(s.get("job_id"), "Unknown Job")
+        else:
+            # If no recruiter_id provided (e.g. admin), fetch job titles as needed
+            job = db.jobs.find_one({"_id": ObjectId(s["job_id"])}, {"title": 1}) if s.get("job_id") else None
+            s["job_title"] = job["title"] if job else "Unknown Job"
     return sessions
 
 @router.get("/activity-logs")
-async def get_all_activity_logs(limit: int = 50):
-    logs = list(db.activity_logs.find().sort("timestamp", -1).limit(limit))
+async def get_all_activity_logs(recruiter_id: Optional[str] = None, limit: int = 50):
+    query = {}
+    if recruiter_id:
+        # Find all jobs by this recruiter
+        jobs = list(db.jobs.find({"recruiter_id": recruiter_id}, {"_id": 1}))
+        job_ids = [str(j["_id"]) for j in jobs]
+        # Find sessions for these jobs
+        sessions = list(db.sessions.find({"job_id": {"$in": job_ids}}, {"session_id": 1}))
+        session_ids = [s["session_id"] for s in sessions]
+        query["session_id"] = {"$in": session_ids}
+        
+    logs = list(db.activity_logs.find(query).sort("timestamp", -1).limit(limit))
     for log in logs:
         log["_id"] = str(log["_id"])
     return logs

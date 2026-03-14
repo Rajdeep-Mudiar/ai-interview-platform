@@ -11,16 +11,20 @@ class Interview(BaseModel):
     name: str
     resume: str
     jd: str
+    job_id: Optional[str] = None
+    session_id: Optional[str] = None
     fit_score: int
     overallScore: int
     timeTaken: int
     integrity: int
+    suspicious_activities: List[dict] = []
     missing_skills: list
     questions: list
     suggestions: list
 
 class Session(BaseModel):
     session_id: str
+    job_id: Optional[str] = None
     candidate_email: str
     desktop_connected: bool = False
     mobile_connected: bool = False

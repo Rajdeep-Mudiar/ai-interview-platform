@@ -14,12 +14,14 @@ class JobCreate(BaseModel):
     title: str
     description: str
     questions: List[str]
+    deadline: Optional[str] = None
 
 
 class JobUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     questions: Optional[List[str]] = None
+    deadline: Optional[str] = None
 
 
 def _job_to_public(doc):
@@ -29,6 +31,7 @@ def _job_to_public(doc):
         "title": doc["title"],
         "description": doc["description"],
         "questions": doc.get("questions", []),
+        "deadline": doc.get("deadline"),
     }
 
 
