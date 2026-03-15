@@ -1,0 +1,16 @@
+opencv-python
+mediapipe
+ultralytics
+requests
+openai-whisper
+pyaudio
+numpy
+fastapi
+uvicorn
+pymongo
+google-generativeai
+python-dotenv
+bcrypt
+pydantic
+motor
+

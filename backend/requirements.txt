@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+scikit-learn
+spacy
+pdfplumber
+sentence-transformers
+reportlab
+pydantic
+pymongo
+python-dotenv
+bcrypt
+google-generativeai
+
