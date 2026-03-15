@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from "react";
 import { useSearchParams, useLocation } from "react-router-dom";
 import axiosClient, { aiClient, secondaryAiClient } from "../utils/axiosClient";
+import { getUserSession } from "../utils/auth";
 import * as faceapi from "face-api.js";
 import Button from "../components/ui/Button";
 import { Card, CardBody, CardHeader } from "../components/ui/Card";
@@ -25,6 +26,8 @@ ChartJS.register(
   Tooltip,
   Legend,
 );
+
+const INTERVIEW_DURATION_SECONDS = 300;
 
 const CheckIcon = () => (
   <svg
@@ -144,6 +147,7 @@ function Interview(props) {
   const jobId = searchParams.get("jobId");
   const videoRef = useRef(null);
   const streamRef = useRef(null);
+  const hasEndedRef = useRef(false);
   const [sessionId, setSessionId] = useState("");
   const [questions, setQuestions] = useState([]);
   const [current, setCurrent] = useState(0);
@@ -153,7 +157,7 @@ function Interview(props) {
   const [concepts, setConcepts] = useState([]);
   const [alert, setAlert] = useState("");
   const [integrity, setIntegrity] = useState(100);
-  const [time, setTime] = useState(300);
+  const [time, setTime] = useState(INTERVIEW_DURATION_SECONDS);
   const [loading, setLoading] = useState(false);
   const [emotion, setEmotion] = useState(null);
   const [behavior, setBehavior] = useState(null);
@@ -237,35 +241,74 @@ function Interview(props) {
     }
   }, [integrity]);
 
+  useEffect(() => {
+    if (!hasStarted || terminated || completed) {
+      return;
+    }
+
+    const timerId = window.setInterval(() => {
+      setTime((prevTime) => {
+        if (prevTime <= 1) {
+          window.clearInterval(timerId);
+          handleInterviewEnd("completed");
+          return 0;
+        }
+        return prevTime - 1;
+      });
+    }, 1000);
+
+    return () => {
+      window.clearInterval(timerId);
+    };
+  }, [hasStarted, terminated, completed]);
+
   const handleInterviewEnd = async (status) => {
-    stopPythonAIServices();
+    if (hasEndedRef.current) {
+      return;
+    }
+    hasEndedRef.current = true;
+
+    await stopPythonAIServices();
+    setHasStarted(false);
     if (status === "terminated") {
       setTerminated(true);
+      setAlert("Interview terminated. Saving results...");
     } else {
       setCompleted(true);
+      setAlert("Interview completed. Saving results...");
     }
 
     // Save full interview results including status
-    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    const user = getUserSession() || {};
+    const elapsedTime = INTERVIEW_DURATION_SECONDS - time;
     try {
       await axiosClient.post("/interview", {
-        user_id: user.id,
-        name: user.name,
+        user_id: user.id || "anonymous-user",
+        name: user.name || "Anonymous User",
         job_id: jobId,
         session_id: sessionId,
         resume: "",
         jd: "",
         fit_score: 0,
         overallScore: 0,
-        timeTaken: 15,
+        timeTaken: Math.max(elapsedTime, 0),
         integrity: integrity,
         status: status, // "completed" or "terminated"
         missing_skills: [],
         questions: questions,
         suggestions: [],
       });
+      setAlert(
+        status === "terminated"
+          ? "Interview terminated and submitted successfully."
+          : "Interview completed and submitted successfully.",
+      );
       console.log(`Interview ${status} and saved.`);
     } catch (err) {
+      hasEndedRef.current = false;
+      setAlert(
+        "Interview finished, but result submission failed. Please retry.",
+      );
       console.error("Failed to save interview results:", err);
     }
   };
@@ -492,6 +535,7 @@ function Interview(props) {
     }
 
     setHasStarted(true);
+    setTime(INTERVIEW_DURATION_SECONDS);
     setAlert("");
     setCheatingPopup("");
     startPythonAIServices();
@@ -613,8 +657,7 @@ function Interview(props) {
     } else {
       // Interview finished
       setProgress(100);
-      handleInterviewEnd("completed");
-      alert("Interview completed successfully!");
+      await handleInterviewEnd("completed");
     }
   };
 
@@ -636,6 +679,16 @@ function Interview(props) {
             <h2 style={styles.title}>Interview Terminated</h2>
             <p style={styles.message}>
               Your interview has been terminated due to a low integrity score.
+            </p>
+          </div>
+        </div>
+      )}
+      {completed && (
+        <div style={styles.overlay}>
+          <div style={styles.popup}>
+            <h2 style={styles.title}>Interview Completed</h2>
+            <p style={styles.message}>
+              Your interview has finished and the results are being submitted.
             </p>
           </div>
         </div>

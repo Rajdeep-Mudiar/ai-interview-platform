@@ -5,6 +5,7 @@ import axiosClient, {
   API_BASE_URL,
   monitoringWsBase,
 } from "../utils/axiosClient";
+import { getUserSession } from "../utils/auth";
 import { Card, CardHeader, CardBody } from "./ui/Card";
 
 const DualMonitoring = ({
@@ -102,14 +103,14 @@ const DualMonitoring = ({
   useEffect(() => {
     const initializeSession = async () => {
       try {
-        const user = JSON.parse(localStorage.getItem("user") || "{}");
+        const user = getUserSession() || {};
         const metadata = {
           userAgent: navigator.userAgent,
           platform: navigator.platform,
           screenResolution: `${window.screen.width}x${window.screen.height}`,
         };
         const response = await axiosClient.post("/monitoring/sessions", {
-          candidate_email: user.name || "candidate@example.com",
+          candidate_email: user.email || user.name || "candidate@example.com",
           metadata: metadata,
         });
         setSessionId(response.data.session_id);
