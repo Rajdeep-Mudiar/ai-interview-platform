@@ -17,4 +17,6 @@ _db = _client[DB_NAME]
 users_col = _db["users"]
 jobs_col = _db["jobs"]
 results_col = _db["results"]
+sessions_col = _db["sessions"]
+activity_logs_col = _db["activity_logs"]
 

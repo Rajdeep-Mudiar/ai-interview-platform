@@ -11,12 +11,13 @@ import Dashboard from "./pages/Dashboard";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import ProtectedRoute from "./components/ProtectedRoute";
-import InterviewFlow from "./pages/InterviewFlow";
-
 import ResumeAnalysis from "./pages/ResumeAnalysis";
+import ResumeBuilder from "./pages/ResumeBuilder";
+import MobileMonitoring from "./pages/MobileMonitoring";
 import VideoLanding from "./pages/VideoLanding";
 import Jobs from "./pages/Jobs";
 import MyJobs from "./pages/MyJobs";
+import Candidates from "./pages/Candidates";
 
 function App() {
   return (
@@ -25,6 +26,11 @@ function App() {
       <main className="min-h-[calc(100vh-4rem)]">
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/mobile-monitoring" element={<MobileMonitoring />} />
+          <Route
+            path="/mobile-monitoring/:sessionId"
+            element={<MobileMonitoring />}
+          />
           <Route
             path="/*"
             element={
@@ -32,9 +38,38 @@ function App() {
                 <Routes>
                   <Route path="/" element={<VideoLanding />} />
                   <Route path="/home" element={<Home />} />
-                  <Route path="/interview" element={<Interview />} />
-                  <Route path="/interview-flow" element={<InterviewFlow />} />
-                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route
+                    path="/resume-analysis"
+                    element={
+                      <ProtectedRoute role="candidate">
+                        <ResumeAnalysis />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/dashboard"
+                    element={
+                      <ProtectedRoute role="candidate">
+                        <Dashboard />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/resume-builder"
+                    element={
+                      <ProtectedRoute role="candidate">
+                        <ResumeBuilder />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/interview"
+                    element={
+                      <ProtectedRoute role="candidate">
+                        <Interview />
+                      </ProtectedRoute>
+                    }
+                  />
                   <Route
                     path="/recruiter-dashboard"
                     element={
@@ -51,10 +86,17 @@ function App() {
                       </ProtectedRoute>
                     }
                   />
+                  <Route
+                    path="/candidates"
+                    element={
+                      <ProtectedRoute role="recruiter">
+                        <Candidates />
+                      </ProtectedRoute>
+                    }
+                  />
                   <Route path="/jobs" element={<Jobs />} />
                   <Route path="/report" element={<Report />} />
                   <Route path="/voice-interview" element={<VoiceInterview />} />
-                  <Route path="/resume-analysis" element={<ResumeAnalysis />} />
                 </Routes>
               </ProtectedRoute>
             }

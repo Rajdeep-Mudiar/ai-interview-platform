@@ -4,14 +4,14 @@
 @layer base {
   :root {
     color-scheme: light;
-    --cb-bg: #ffffff;
+    --cb-bg: #f8fafc; /* slate-50 */
     --cb-surface: #ffffff;
     --cb-text: #0f172a; /* slate-900 */
     --cb-muted: #64748b; /* slate-500 */
-    --cb-border: rgba(15, 23, 42, 0.10);
-    --cb-accent: #2563eb; /* blue-600 */
-    --cb-accent-hover: #1d4ed8; /* blue-700 */
-    --cb-accent-soft: rgba(37, 99, 235, 0.10);
+    --cb-border: #e2e8f0; /* slate-200 */
+    --cb-accent: #0f172a; /* slate-900 */
+    --cb-accent-hover: #1e293b; /* slate-800 */
+    --cb-accent-soft: #f1f5f9; /* slate-100 */
   }
 
   html,
@@ -42,18 +42,16 @@
   }
 
   .cb-surface {
-    @apply rounded-2xl bg-white ring-1 ring-slate-200;
-    box-shadow:
-      0 1px 2px rgba(15, 23, 42, 0.06),
-      0 10px 24px rgba(15, 23, 42, 0.06);
+    @apply rounded-xl bg-white border border-slate-200;
+    box-shadow: none;
   }
 
   .cb-kicker {
-    @apply text-xs font-medium uppercase tracking-wide text-slate-500;
+    @apply text-xs font-bold uppercase tracking-wider text-slate-500;
   }
 
   .cb-title {
-    @apply text-balance text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl;
+    @apply text-balance text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl;
   }
 
   .cb-subtitle {
@@ -62,29 +60,27 @@
 
   /* UI primitives */
   .cb-btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg font-medium transition;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg font-medium;
     @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2;
     @apply disabled:pointer-events-none disabled:opacity-50;
   }
   .cb-btn--primary {
     background: var(--cb-accent);
     color: #fff;
-    @apply shadow-sm;
-    @apply hover:shadow;
+    @apply hover:bg-slate-800;
     @apply focus-visible:outline;
     outline-color: var(--cb-accent);
   }
   .cb-btn--secondary {
     background: var(--cb-surface);
     color: var(--cb-text);
-    @apply shadow-sm ring-1;
-    border-color: var(--cb-border);
+    @apply border border-slate-200;
     @apply hover:bg-slate-50;
     @apply focus-visible:outline;
     outline-color: var(--cb-accent);
   }
   .cb-btn--danger {
-    @apply bg-rose-600 text-white shadow-sm hover:bg-rose-500;
+    @apply bg-rose-600 text-white hover:bg-rose-700;
     @apply focus-visible:outline-rose-600;
   }
   .cb-btn--ghost {

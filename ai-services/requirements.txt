@@ -1,0 +1,10 @@
+opencv-python
+mediapipe
+ultralytics
+requests
+openai-whisper
+pyaudio
+numpy
+fastapi
+uvicorn
+pymongo

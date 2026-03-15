@@ -38,8 +38,8 @@ export default function VideoLanding() {
           <div className="cb-videoBlendOverlay" />
 
           <div className="absolute bottom-5 left-5 flex flex-col gap-3 sm:flex-row">
-            <Button as="a" href="/interview-flow" size="lg">
-              Start interview
+            <Button as="a" href="/resume-analysis" size="lg">
+              Analyze Resume
             </Button>
             {isRecruiter && (
               <Button

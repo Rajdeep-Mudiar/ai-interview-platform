@@ -17,14 +17,16 @@ def evaluate_answer(question, answer):
     for key in IDEAL_ANSWERS:
         if key in question.lower():
             ideal = IDEAL_ANSWERS[key]
+            break
     if not ideal:
-        ideal = question
+        return {
+            "score": 0,
+            "similarity": 0
+        }
     embeddings = model.encode([ideal, answer])
     similarity = cosine_similarity([embeddings[0]], [embeddings[1]])[0][0]
-    score = round(similarity * 10, 2)
-    if score > 10:
-        score = 10
+    score = min(round(similarity * 10, 2), 10)
     return {
         "score": score,
-        "similarity": round(similarity*100,2)
+        "similarity": round(similarity * 100, 2)
     }

@@ -18,10 +18,10 @@ export default function Footer() {
           <div className="cb-footerCol md:justify-self-center">
             <div className="cb-footer__heading">Product</div>
             <a className="cb-footer__link" href="/resume-analysis">
-              Resume analysis
+              Resume Analysis
             </a>
-            <a className="cb-footer__link" href="/interview-flow">
-              Interview pipeline
+            <a className="cb-footer__link" href="/resume-builder">
+              Resume Builder
             </a>
             {isRecruiter && (
               <a className="cb-footer__link" href="/recruiter-dashboard">

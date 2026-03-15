@@ -1,0 +1,16 @@
+{
+  "scripts": {
+    "py-deps": "python -m pip install -r backend/requirements.txt -r ai-services/requirements.txt",
+    "clean-ports": "node scripts/kill-ports.js 5173 8000 8001",
+    "frontend": "cd frontend && npm run dev -- --host 0.0.0.0 --port 5173 --strictPort",
+    "backend": "cd backend && python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000",
+    "ai": "cd ai-services && python server.py",
+    "ngrok": "node scripts/start-dev.js",
+    "dev-all": "npm run clean-ports && npm run py-deps && concurrently \"npm run backend\" \"npm run ai\" \"npm run ngrok\" \"npm run frontend\"",
+    "dev-all-local": "npm run clean-ports && npm run py-deps && concurrently \"npm run backend\" \"npm run ai\" \"npm run frontend\""
+  },
+  "dependencies": {
+    "axios": "^1.13.6",
+    "concurrently": "^9.2.1"
+  }
+}
