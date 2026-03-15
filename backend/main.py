@@ -25,12 +25,18 @@ from routes.ranking import router as ranking_router
 from routes.resume_analysis import router as resume_router
 from routes.interview_questions import router as question_router
 from routes.evaluate_answer import router as eval_router
+from routes.evaluate_interview import router as interview_eval_router
+from routes.reeval import router as reeval_router
 from routes.report import router as report_router
 from routes.hiring_decision import router as decision_router
 from routes.auth import router as auth_router
 from routes.jobs import router as jobs_router
 from routes.stats import router as stats_router
+<<<<<<< HEAD
 from routes.monitoring import router as monitoring_router
+=======
+from routes.alerts import router as alerts_router
+>>>>>>> f8fff86 (changes)
 
 app = FastAPI()
 app.include_router(ranking_router)
@@ -43,7 +49,13 @@ app.include_router(auth_router)
 app.include_router(jobs_router)
 app.include_router(stats_router)
 app.include_router(leaderboard_router)
+<<<<<<< HEAD
 app.include_router(monitoring_router)
+=======
+app.include_router(interview_eval_router)
+app.include_router(reeval_router)
+app.include_router(alerts_router)
+>>>>>>> f8fff86 (changes)
 
 app.add_middleware(
 CORSMiddleware,
@@ -52,6 +64,17 @@ allow_methods=["*"],
 allow_headers=["*"],
 )
 
+<<<<<<< HEAD
+=======
+@app.post("/upload_resume")
+async def upload_resume(file: UploadFile):
+    file_path = f"resumes/{file.filename}"
+    with open(file_path,"wb") as buffer:
+        shutil.copyfileobj(file.file,buffer)
+    result = parse_resume(file_path)
+    return result
+
+>>>>>>> f8fff86 (changes)
 @app.post("/match_jd")
 def match_jd(data: MatchJDRequest):
     result = analyze_candidate(data.resume, data.jd)
@@ -99,6 +122,10 @@ def suggest(data: ResumeSuggestionsRequest):
     )
     return {"suggestions": suggestions}
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> f8fff86 (changes)
 @app.post("/emotion_analysis")
 def emotion(data: EmotionAnalysisRequest):
     result = analyze_emotions(data.emotions)

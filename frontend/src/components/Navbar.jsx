@@ -7,9 +7,21 @@ import { getUserSession, clearUserSession } from "../utils/auth";
 const candidateNavItems = [
   { to: "/", label: "Home" },
   { to: "/jobs", label: "Jobs" },
+<<<<<<< HEAD
   { to: "/resume-analysis", label: "Resume Analysis" },
   { to: "/resume-builder", label: "Resume Builder" },
   { to: "/dashboard", label: "Candidate Dashboard" },
+=======
+  { to: "/dashboard", label: "Dashboard" },
+  { to: "/leaderboard", label: "Leaderboard" },
+];
+
+const recruiterNavItems = [
+  { to: "/", label: "Home" },
+  { to: "/recruiter-dashboard", label: "Dashboard" },
+  { to: "/reevaluate", label: "Re-evaluate" },
+  { to: "/leaderboard", label: "Leaderboard" },
+>>>>>>> f8fff86 (changes)
 ];
 
 const recruiterNavItems = [
@@ -70,21 +82,21 @@ export default function Navbar() {
           </nav>
 
           <div className="cb-navbar__actions">
-            {session ? (
-              <Button onClick={handleLogout} variant="secondary" size="sm" className="cb-hide-sm">
-                Logout
-              </Button>
-            ) : (
-              <Button
-                as={Link}
-                to="/login"
-                variant="secondary"
-                size="sm"
-                className="cb-hide-sm"
-              >
-                Upload Resume
-              </Button>
+            {session && (
+              <span className="hidden text-sm text-slate-600 sm:inline">
+                {session.name} ({session.role})
+              </span>
             )}
+            <Button
+              as={Link}
+              to={session ? "/login" : "/login"}
+              onClick={session ? handleLogout : undefined}
+              variant="secondary"
+              size="sm"
+              className="cb-hide-sm"
+            >
+              {session ? "Logout" : "Sign in"}
+            </Button>
             <Button
               variant="ghost"
               size="sm"
@@ -109,21 +121,21 @@ export default function Navbar() {
                 </NavItem>
               ))}
               <div className="cb-mobileNav__cta">
-                {session ? (
-                  <Button onClick={handleLogout} variant="secondary" className="w-full">
-                    Logout
-                  </Button>
-                ) : (
-                  <Button
-                    as={Link}
-                    to="/login"
-                    variant="secondary"
-                    className="w-full"
-                    onClick={() => setOpen(false)}
-                  >
-                    Upload Resume
-                  </Button>
-                )}
+                <Button
+                  as={Link}
+                  to="/login"
+                  variant="secondary"
+                  className="w-full"
+                  onClick={() => {
+                    if (session) {
+                      handleLogout();
+                    } else {
+                      setOpen(false);
+                    }
+                  }}
+                >
+                  {session ? "Logout" : "Sign in"}
+                </Button>
               </div>
             </div>
           </div>

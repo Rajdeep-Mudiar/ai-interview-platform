@@ -1,7 +1,22 @@
 from pydantic import BaseModel
+<<<<<<< HEAD
 from datetime import datetime
 from typing import Optional, List
 from database.mongo import _db as db
+=======
+from typing import List, Optional
+
+client = pymongo.MongoClient("mongodb://localhost:27017/")
+db = client["ai_interview_platform"]
+>>>>>>> f8fff86 (changes)
+
+
+class QA(BaseModel):
+    question: str
+    preferred_answer: Optional[str] = None
+    candidate_answer: Optional[str] = None
+    ai_score: Optional[int] = None
+
 
 class Interview(BaseModel):
     user_id: str
@@ -14,6 +29,7 @@ class Interview(BaseModel):
     overallScore: int
     timeTaken: int
     integrity: int
+<<<<<<< HEAD
     status: str = "completed" # completed | terminated
     suspicious_activities: List[dict] = []
     missing_skills: list
@@ -40,3 +56,8 @@ class ActivityLog(BaseModel):
     confidence_score: float
     timestamp: datetime = datetime.now()
     metadata: Optional[dict] = {}
+=======
+    missing_skills: List[str]
+    questions: List[QA]
+    suggestions: List[str]
+>>>>>>> f8fff86 (changes)

@@ -4,7 +4,9 @@ from typing import Optional
 
 router = APIRouter()
 
+
 @router.get("/leaderboard")
+<<<<<<< HEAD
 async def get_leaderboard(recruiter_id: Optional[str] = None):
     query = {}
     if recruiter_id:
@@ -42,3 +44,40 @@ async def get_leaderboard(recruiter_id: Optional[str] = None):
             "integrity": int(doc.get("integrity", 100)),
         })
     return candidates
+=======
+async def get_leaderboard():
+    """
+    Leaderboard based on interview results stored in results_col.
+    Aggregates by candidate and sorts by average_score.
+    """
+    pipeline = [
+        {
+            "$group": {
+                "_id": "$candidate_id",
+                "candidate_name": {"$first": "$candidate_name"},
+                "avg_score": {"$avg": "$average_score"},
+                "avg_integrity": {"$avg": "$integrity_score"},
+                "total_time": {"$sum": "$time_taken_seconds"},
+                "attempts": {"$sum": 1},
+            }
+        },
+        {"$sort": {"avg_score": -1}},
+        {"$limit": 10},
+    ]
+
+    docs = list(results_col.aggregate(pipeline))
+    leaderboard = []
+    for doc in docs:
+        leaderboard.append(
+            {
+                "candidate_id": doc["_id"],
+                "name": doc.get("candidate_name", "Unknown"),
+                "average_score": doc.get("avg_score", 0),
+                "average_integrity": doc.get("avg_integrity", 0),
+                "total_time": doc.get("total_time", 0),
+                "attempts": doc.get("attempts", 0),
+            }
+        )
+    return leaderboard
+
+>>>>>>> f8fff86 (changes)

@@ -9,4 +9,5 @@ pydantic
 pymongo
 python-dotenv
 bcrypt
+google-generativeai
 

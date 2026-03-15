@@ -14,14 +14,22 @@ class JobCreate(BaseModel):
     title: str
     description: str
     questions: List[str]
+<<<<<<< HEAD
     deadline: Optional[str] = None
+=======
+    preferred_answers: List[str]
+>>>>>>> f8fff86 (changes)
 
 
 class JobUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     questions: Optional[List[str]] = None
+<<<<<<< HEAD
     deadline: Optional[str] = None
+=======
+    preferred_answers: Optional[List[str]] = None
+>>>>>>> f8fff86 (changes)
 
 
 def _job_to_public(doc):
@@ -31,12 +39,21 @@ def _job_to_public(doc):
         "title": doc["title"],
         "description": doc["description"],
         "questions": doc.get("questions", []),
+<<<<<<< HEAD
         "deadline": doc.get("deadline"),
+=======
+        "preferred_answers": doc.get("preferred_answers", []),
+>>>>>>> f8fff86 (changes)
     }
 
 
 @router.post("/", response_model=dict)
 def create_job(body: JobCreate):
+    if len(body.preferred_answers) != len(body.questions):
+        raise HTTPException(
+            status_code=400,
+            detail="preferred_answers must have the same length as questions",
+        )
     doc = body.model_dump()
     result = jobs_col.insert_one(doc)
     doc["_id"] = result.inserted_id
@@ -58,4 +75,5 @@ def get_job(job_id: str):
     if not doc:
         raise HTTPException(status_code=404, detail="Job not found")
     return _job_to_public(doc)
+
 

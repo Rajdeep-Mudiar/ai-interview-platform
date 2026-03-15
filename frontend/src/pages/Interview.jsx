@@ -161,6 +161,7 @@ function Interview(props) {
   const [loading, setLoading] = useState(false);
   const [emotion, setEmotion] = useState(null);
   const [behavior, setBehavior] = useState(null);
+<<<<<<< HEAD
   const [behaviorScore, setBehaviorScore] = useState(0);
   const [terminated, setTerminated] = useState(false);
   const [completed, setCompleted] = useState(false);
@@ -196,6 +197,9 @@ function Interview(props) {
       console.error("Failed to stop Python AI services:", err);
     }
   }
+=======
+  const [behaviorScore, setBehaQviorScore] = useState(0);
+>>>>>>> f8fff86 (changes)
 
   // Load questions from backend based on skills
   async function loadQuestions(skills) {
