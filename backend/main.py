@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from fastapi import FastAPI, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from resume_parser.parser import parse_resume
@@ -12,7 +14,7 @@ from database.store import save_candidate
 from analytics.resume_advisor import resume_suggestions
 from analytics.emotion import analyze_emotions
 from leaderboard import router as leaderboard_router
-from pipeline_db import db, Interview
+from pipeline_db import Interview
 from schemas import (
     MatchJDRequest, FinalScoreRequest, CheatingScoreRequest,
     ExplainDecisionRequest, SaveCandidateRequest, ResumeSuggestionsRequest,
@@ -104,12 +106,12 @@ def emotion(data: EmotionAnalysisRequest):
 
 @app.post("/interview")
 async def save_interview(interview: Interview):
-    from database.mongo import results_col, jobs_col
-    from database.mongo import _db as db
+    from database.mongo import activity_logs_col, results_col, sessions_col
+
     # Fetch all activity logs for this session to include in the permanent record
     suspicious_logs = []
     if interview.session_id:
-        logs = list(db.activity_logs.find({
+        logs = list(activity_logs_col.find({
             "session_id": interview.session_id,
             "event": {"$nin": ["device_connected", "heartbeat"]}
         }).sort("timestamp", 1))
@@ -121,14 +123,14 @@ async def save_interview(interview: Interview):
                 "confidence": log.get("confidence_score", 1.0)
             })
     
-    interview_dict = interview.dict()
+    interview_dict = interview.model_dump()
     interview_dict["suspicious_activities"] = suspicious_logs
     
     results_col.insert_one(interview_dict)
     
     # Also update the session status if it exists
     if interview.session_id:
-        db.sessions.update_one(
+        sessions_col.update_one(
             {"session_id": interview.session_id},
             {"$set": {"status": interview.status, "end_time": datetime.now()}}
         )

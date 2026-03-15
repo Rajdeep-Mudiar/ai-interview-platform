@@ -50,6 +50,7 @@ async def get_candidate_stats(user_id: str):
             "lastScore": 0,
             "history": []
         }
+    latest = user_results[0]
     
     # Calculate percentile (robustly handle missing fields)
     all_results = list(results_col.find({}, {"overallScore": 1}))

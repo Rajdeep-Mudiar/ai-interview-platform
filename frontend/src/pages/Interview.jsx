@@ -14,8 +14,8 @@ import {
   Title,
   Tooltip,
   Legend,
-} from 'chart.js';
-import { Bar } from 'react-chartjs-2';
+} from "chart.js";
+import { Bar } from "react-chartjs-2";
 
 ChartJS.register(
   CategoryScale,
@@ -23,52 +23,122 @@ ChartJS.register(
   BarElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
 );
 
-  const CheckIcon = () => (
-    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-    </svg>
-  );
+const CheckIcon = () => (
+  <svg
+    className="w-4 h-4"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      d="M5 13l4 4L19 7"
+    />
+  </svg>
+);
 
-  const WarningIcon = () => (
-    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-    </svg>
-  );
+const WarningIcon = () => (
+  <svg
+    className="w-4 h-4"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+    />
+  </svg>
+);
 
-  const TargetIcon = () => (
-    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-  );
+const TargetIcon = () => (
+  <svg
+    className="w-4 h-4"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+    />
+  </svg>
+);
 
-  const ClockIcon = () => (
-    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-  );
+const ClockIcon = () => (
+  <svg
+    className="w-4 h-4"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+    />
+  </svg>
+);
 
-  const SparklesIcon = () => (
-    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-    </svg>
-  );
+const SparklesIcon = () => (
+  <svg
+    className="w-4 h-4"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
+    />
+  </svg>
+);
 
-  const ArrowRightIcon = () => (
-    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-    </svg>
-  );
+const ArrowRightIcon = () => (
+  <svg
+    className="w-4 h-4"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      d="M14 5l7 7m0 0l-7 7m7-7H3"
+    />
+  </svg>
+);
 
-  const MicIcon = () => (
-    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-    </svg>
-  );
+const MicIcon = () => (
+  <svg
+    className="w-6 h-6"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+    />
+  </svg>
+);
 
-  function Interview(props) {
+function Interview(props) {
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const jobId = searchParams.get("jobId");
@@ -94,20 +164,9 @@ ChartJS.register(
   const [isAnalyzingFace, setIsAnalyzingFace] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-
-  useEffect(() => {
-    // Auto-initialize if we have jobId (either from state or search params)
-    if (questions.length === 0 && !loading && !hasStarted) {
-      if (location.state?.skills && location.state.skills.length > 0) {
-        console.log("Auto-initializing interview with skills from state:", location.state.skills);
-        loadQuestions(location.state.skills);
-      } else if (jobId) {
-        console.log("Auto-initializing interview with jobId:", jobId);
-        // We pass empty skills because backend will fetch recruiter questions via jobId
-        loadQuestions([]);
-      }
-    }
-  }, [location.state, jobId, questions.length, loading, hasStarted]);
+  const [isMobileConnected, setIsMobileConnected] = useState(false);
+  const [cheatingPopup, setCheatingPopup] = useState("");
+  const [cheatingPopupType, setCheatingPopupType] = useState("warning");
 
   // Start/Stop Python AI services
   async function startPythonAIServices() {
@@ -115,7 +174,9 @@ ChartJS.register(
       // Start main proctoring server (Port 8001)
       await aiClient.post("/start", { user_id: "test_user" });
       // Start secondary device monitor (Port 8002)
-      await secondaryAiClient.post("/start", { session_id: "dev_session_local" });
+      await secondaryAiClient.post("/start", {
+        session_id: "dev_session_local",
+      });
       console.log("Python AI Services started successfully.");
     } catch (err) {
       console.error("Failed to start Python AI services:", err);
@@ -136,47 +197,36 @@ ChartJS.register(
   async function loadQuestions(skills) {
     setLoading(true);
     setIsAnalyzingFace(true);
+    let loadedQuestions = [];
     try {
       const res = await axiosClient.post("/generate-questions", {
         skills: skills,
         job_id: jobId,
       });
-      setQuestions(res.data.questions || []);
+      loadedQuestions = res.data.questions || [];
+      setQuestions(loadedQuestions);
       setCurrent(0);
       setProgress(0);
       setScore(null);
       setConcepts([]);
       setAnswer("");
+      return loadedQuestions;
     } catch (err) {
       console.error("Failed to load questions:", err);
       setQuestions([]);
-      setIsAnalyzingFace(false);
+      return [];
     } finally {
       setLoading(false);
+      setIsAnalyzingFace(false);
     }
   }
-
-  // Monitor face detection to start the interview
-  useEffect(() => {
-    let timer;
-    // We only transition if we have questions ready AND face is detected
-    if (isAnalyzingFace && isFaceDetected && !hasStarted && questions && questions.length > 0) {
-      console.log("Face detected and questions loaded. Starting technical assessment...");
-      timer = setTimeout(() => {
-        setIsAnalyzingFace(false);
-        setHasStarted(true);
-        startPythonAIServices();
-      }, 2000); 
-    }
-    return () => {
-      if (timer) clearTimeout(timer);
-    };
-  }, [isAnalyzingFace, isFaceDetected, hasStarted, questions]);
 
   // Handle case where questions might be empty or failed to load
   useEffect(() => {
     if (isAnalyzingFace && !loading && (!questions || questions.length === 0)) {
-      console.warn("Questions failed to load or are empty. Resetting analysis state.");
+      console.warn(
+        "Questions failed to load or are empty. Resetting analysis state.",
+      );
       setIsAnalyzingFace(false);
     }
   }, [isAnalyzingFace, loading, questions]);
@@ -203,16 +253,16 @@ ChartJS.register(
         name: user.name,
         job_id: jobId,
         session_id: sessionId,
-        resume: "", 
-        jd: "",     
+        resume: "",
+        jd: "",
         fit_score: 0,
-        overallScore: 0, 
+        overallScore: 0,
         timeTaken: 15,
         integrity: integrity,
         status: status, // "completed" or "terminated"
         missing_skills: [],
         questions: questions,
-        suggestions: []
+        suggestions: [],
       });
       console.log(`Interview ${status} and saved.`);
     } catch (err) {
@@ -269,12 +319,14 @@ ChartJS.register(
           setAlert("Multiple faces detected!");
           setIntegrity((prev) => Math.max(prev - 15, 0));
           if (sessionId) {
-            axiosClient.post("/monitoring/events", {
-              session_id: sessionId,
-              device: "desktop",
-              event: "multiple_person_detected",
-              confidence_score: 1.0,
-            }).catch(e => console.error("Failed to log multiple faces:", e));
+            axiosClient
+              .post("/monitoring/events", {
+                session_id: sessionId,
+                device: "desktop",
+                event: "multiple_person_detected",
+                confidence_score: 1.0,
+              })
+              .catch((e) => console.error("Failed to log multiple faces:", e));
           }
         } else if (detections.length === 0) {
           setIsFaceDetected(false);
@@ -306,12 +358,16 @@ ChartJS.register(
                 setAlert("Looking away from screen");
                 setIntegrity((prev) => Math.max(prev - 5, 0));
                 if (sessionId) {
-                  axiosClient.post("/monitoring/events", {
-                    session_id: sessionId,
-                    device: "desktop",
-                    event: "looking_away",
-                    confidence_score: 1.0,
-                  }).catch(e => console.error("Failed to log looking away:", e));
+                  axiosClient
+                    .post("/monitoring/events", {
+                      session_id: sessionId,
+                      device: "desktop",
+                      event: "looking_away",
+                      confidence_score: 1.0,
+                    })
+                    .catch((e) =>
+                      console.error("Failed to log looking away:", e),
+                    );
                 }
               } else {
                 setAlert("");
@@ -331,7 +387,7 @@ ChartJS.register(
               }
             }
             setEmotion(maxEmotion);
-            
+
             const interpretEmotion = (emo) => {
               if (emo === "happy") return "Confident";
               if (emo === "neutral") return "Calm";
@@ -343,7 +399,8 @@ ChartJS.register(
             let score = 3;
             if (maxEmotion === "happy") score = 5;
             else if (maxEmotion === "neutral") score = 3;
-            else if (maxEmotion === "fearful" || maxEmotion === "sad") score = 1;
+            else if (maxEmotion === "fearful" || maxEmotion === "sad")
+              score = 1;
             setBehaviorScore(score);
           }
         }
@@ -376,7 +433,10 @@ ChartJS.register(
   // Speak question when it loads
   useEffect(() => {
     if (questions.length > 0 && questions[current]) {
-      const qText = typeof questions[current] === 'object' ? questions[current].question : questions[current];
+      const qText =
+        typeof questions[current] === "object"
+          ? questions[current].question
+          : questions[current];
       speak(qText);
     }
   }, [questions, current]);
@@ -388,7 +448,7 @@ ChartJS.register(
         device: "desktop_camera",
         event: "looking_away",
         confidence_score: 1.0,
-        metadata: { message: "Candidate looking away" }
+        metadata: { message: "Candidate looking away" },
       });
       console.log("Alert sent successfully");
     } catch (error) {
@@ -398,16 +458,65 @@ ChartJS.register(
 
   // Manual trigger for interview initialization if auto-init fails
   const generate = async () => {
-    if (loading || questions.length > 0) return;
-    
-    if (location.state?.skills) {
-      loadQuestions(location.state.skills);
-    } else if (jobId) {
-      loadQuestions([]);
-    } else {
-      loadQuestions(["General Technical"]);
+    if (loading || hasStarted) return;
+
+    if (!isFaceDetected || !isMobileConnected) {
+      const missingChecks = [];
+      if (!isFaceDetected) missingChecks.push("website face detection");
+      if (!isMobileConnected) missingChecks.push("mobile camera connection");
+      const message = `Cannot start yet. Please complete: ${missingChecks.join(" and ")}.`;
+      setAlert(message);
+      setCheatingPopupType("warning");
+      setCheatingPopup(message);
+      return;
     }
+
+    let loadedQuestions = questions;
+    if (loadedQuestions.length === 0) {
+      if (location.state?.skills) {
+        loadedQuestions = await loadQuestions(location.state.skills);
+      } else if (jobId) {
+        loadedQuestions = await loadQuestions([]);
+      } else {
+        loadedQuestions = await loadQuestions(["General Technical"]);
+      }
+    }
+
+    if (!loadedQuestions || loadedQuestions.length === 0) {
+      const message =
+        "Unable to start interview because questions could not be loaded.";
+      setAlert(message);
+      setCheatingPopupType("warning");
+      setCheatingPopup(message);
+      return;
+    }
+
+    setHasStarted(true);
+    setAlert("");
+    setCheatingPopup("");
+    startPythonAIServices();
   };
+
+  const handleSuspiciousActivity = (activity) => {
+    const message = activity?.message || "Suspicious activity detected.";
+    const isMobileEvent = String(activity?.device || "")
+      .toLowerCase()
+      .includes("mobile");
+
+    setAlert(message);
+    setCheatingPopupType("danger");
+    setCheatingPopup(
+      isMobileEvent ? `Mobile cheating detected: ${message}` : message,
+    );
+  };
+
+  useEffect(() => {
+    if (!cheatingPopup) return;
+    const timer = setTimeout(() => setCheatingPopup(""), 4500);
+    return () => clearTimeout(timer);
+  }, [cheatingPopup]);
+
+  const canStartInterview = isFaceDetected && isMobileConnected && !hasStarted;
 
   // Expose loadQuestions for parent/other pages
   if (props && typeof props.onLoadQuestions === "function") {
@@ -416,12 +525,13 @@ ChartJS.register(
 
   // Voice Answer Recording
   function startRecording() {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       alert("Speech recognition not supported in this browser.");
       return;
     }
-    
+
     if (isRecording) {
       // Toggle off if already recording (manual stop)
       setIsRecording(false);
@@ -480,7 +590,10 @@ ChartJS.register(
   const submitAnswer = async () => {
     if (!answer.trim()) return;
     setLoading(true);
-    const qText = typeof questions[current] === 'object' ? questions[current].question : questions[current];
+    const qText =
+      typeof questions[current] === "object"
+        ? questions[current].question
+        : questions[current];
     await evaluateAnswer(qText, answer);
     setLoading(false);
     // Auto next question after short delay
@@ -508,11 +621,22 @@ ChartJS.register(
   return (
     <div className="cb-container py-8 sm:py-12">
       <TabFocusWarning />
+      {cheatingPopup && (
+        <div className="fixed right-5 top-5 z-[10000] max-w-sm rounded-xl border border-rose-200 bg-white p-4 shadow-xl">
+          <p
+            className={`text-sm font-semibold ${cheatingPopupType === "danger" ? "text-rose-700" : "text-amber-700"}`}
+          >
+            {cheatingPopup}
+          </p>
+        </div>
+      )}
       {terminated && (
         <div style={styles.overlay}>
           <div style={styles.popup}>
             <h2 style={styles.title}>Interview Terminated</h2>
-            <p style={styles.message}>Your interview has been terminated due to a low integrity score.</p>
+            <p style={styles.message}>
+              Your interview has been terminated due to a low integrity score.
+            </p>
           </div>
         </div>
       )}
@@ -520,31 +644,73 @@ ChartJS.register(
       <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-8 pb-6 border-b border-slate-100">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-white shadow-lg">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.75 17L9 21h6l-.75-4M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M9.75 17L9 21h6l-.75-4M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+              />
             </svg>
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">AI Technical Interview</h1>
+            <h1 className="text-2xl font-bold text-slate-900">
+              AI Technical Interview
+            </h1>
             <div className="flex items-center gap-2 mt-1">
               <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Live Session Active</span>
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                Live Session Active
+              </span>
             </div>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="hidden sm:flex flex-col items-end px-4 border-r border-slate-200">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Time Remaining</span>
-            <span className={`text-xl font-mono font-bold ${time < 60 ? 'text-rose-600' : 'text-slate-900'}`}>
-              {Math.floor(time / 60)}:{(time % 60).toString().padStart(2, '0')}
+          <div className="hidden md:flex items-center gap-2">
+            <span
+              className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${isFaceDetected ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}
+            >
+              {isFaceDetected ? <CheckIcon /> : <WarningIcon />}
+              Desktop Face {isFaceDetected ? "Ready" : "Missing"}
+            </span>
+            <span
+              className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${isMobileConnected ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}
+            >
+              {isMobileConnected ? <CheckIcon /> : <WarningIcon />}
+              Mobile Camera {isMobileConnected ? "Ready" : "Missing"}
             </span>
           </div>
-          <Button onClick={generate} disabled={loading || questions.length > 0} className="h-11 px-6 bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md shadow-blue-500/20">
-            {questions.length > 0 ? "Interview in Progress" : "Initialize Interview"}
+          <div className="hidden sm:flex flex-col items-end px-4 border-r border-slate-200">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">
+              Time Remaining
+            </span>
+            <span
+              className={`text-xl font-mono font-bold ${time < 60 ? "text-rose-600" : "text-slate-900"}`}
+            >
+              {Math.floor(time / 60)}:{(time % 60).toString().padStart(2, "0")}
+            </span>
+          </div>
+          <Button
+            onClick={generate}
+            disabled={loading || hasStarted || !canStartInterview}
+            className="h-11 px-6 bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md shadow-blue-500/20 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {hasStarted ? "Interview in Progress" : "Start Interview"}
           </Button>
         </div>
       </div>
+
+      {alert && (
+        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+          {alert}
+        </div>
+      )}
 
       <div className="grid gap-8 lg:grid-cols-12 items-start">
         {/* Left Column: Video & Proctoring */}
@@ -567,13 +733,17 @@ ChartJS.register(
                       <TargetIcon className="w-8 h-8 text-blue-500 animate-pulse" />
                     </div>
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-2">Analyzing Face</h3>
+                  <h3 className="text-xl font-bold text-white mb-2">
+                    Analyzing Face
+                  </h3>
                   <p className="text-blue-200/60 text-sm font-medium animate-pulse">
-                    {isFaceDetected ? "Face Detected. Calibrating..." : "Please position your face in the frame"}
+                    {isFaceDetected
+                      ? "Face Detected. Calibrating..."
+                      : "Please position your face in the frame"}
                   </p>
                 </div>
               )}
-              
+
               {/* Overlay UI */}
               <div className="absolute top-4 left-4 flex flex-col gap-2">
                 <div className="px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/20 text-[10px] font-bold text-white uppercase tracking-wider flex items-center gap-2">
@@ -584,13 +754,23 @@ ChartJS.register(
 
               <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between">
                 <div className="px-3 py-1.5 rounded-xl bg-black/40 backdrop-blur-md border border-white/20">
-                  <div className="text-[10px] font-bold text-white/60 uppercase mb-0.5">Emotion</div>
+                  <div className="text-[10px] font-bold text-white/60 uppercase mb-0.5">
+                    Emotion
+                  </div>
                   <div className="text-xs font-bold text-white flex items-center gap-2">
-                    {emotion === "happy" ? "Positive" : emotion === "neutral" ? "Composed" : emotion === "fearful" ? "Nervous" : "Analyzing..."}
+                    {emotion === "happy"
+                      ? "Positive"
+                      : emotion === "neutral"
+                        ? "Composed"
+                        : emotion === "fearful"
+                          ? "Nervous"
+                          : "Analyzing..."}
                   </div>
                 </div>
                 <div className="px-3 py-1.5 rounded-xl bg-black/40 backdrop-blur-md border border-white/20 text-right">
-                  <div className="text-[10px] font-bold text-white/60 uppercase mb-0.5">Focus</div>
+                  <div className="text-[10px] font-bold text-white/60 uppercase mb-0.5">
+                    Focus
+                  </div>
                   <div className="text-xs font-bold text-white flex items-center gap-1.5 justify-end">
                     {integrity > 90 ? <TargetIcon /> : <WarningIcon />}
                     {integrity > 90 ? "Locked In" : "Distracted"}
@@ -598,35 +778,50 @@ ChartJS.register(
                 </div>
               </div>
             </div>
-            
+
             {/* Visual Signal Bars */}
             <div className="absolute -right-2 top-1/2 -translate-y-1/2 flex flex-col gap-1">
-              {[1, 2, 3].map(i => (
-                <div key={i} className={`w-1 h-8 rounded-full ${integrity > 80 ? 'bg-emerald-500' : 'bg-amber-500'} opacity-40 shadow-sm`}></div>
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className={`w-1 h-8 rounded-full ${integrity > 80 ? "bg-emerald-500" : "bg-amber-500"} opacity-40 shadow-sm`}
+                ></div>
               ))}
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-white p-5 rounded-2xl ring-1 ring-slate-200 shadow-sm">
-              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Integrity Score</div>
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                Integrity Score
+              </div>
               <div className="flex items-end gap-2">
-                <span className={`text-3xl font-bold ${integrity > 80 ? 'text-emerald-600' : 'text-amber-600'}`}>{Math.round(integrity)}%</span>
-                <span className="text-xs text-slate-400 mb-1 font-medium">Global Avg: 88%</span>
+                <span
+                  className={`text-3xl font-bold ${integrity > 80 ? "text-emerald-600" : "text-amber-600"}`}
+                >
+                  {Math.round(integrity)}%
+                </span>
+                <span className="text-xs text-slate-400 mb-1 font-medium">
+                  Global Avg: 88%
+                </span>
               </div>
             </div>
             <div className="bg-white p-5 rounded-2xl ring-1 ring-slate-200 shadow-sm flex flex-col justify-center">
-              <Button onClick={sendGazeAlert} variant="secondary" className="h-9 text-[10px] font-bold uppercase tracking-tight border-slate-200 text-slate-500 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 transition-all">
+              <Button
+                onClick={sendGazeAlert}
+                variant="secondary"
+                className="h-9 text-[10px] font-bold uppercase tracking-tight border-slate-200 text-slate-500 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 transition-all"
+              >
                 Test Gaze Alert
               </Button>
             </div>
           </div>
 
-          <DualMonitoring 
-            sessionId={sessionId} 
-            setSessionId={setSessionId} 
-            jobId={jobId} 
-            onIntegrityChange={(score) => setIntegrity(score)}
+          <DualMonitoring
+            sessionId={sessionId}
+            setSessionId={setSessionId}
+            onSuspiciousActivity={handleSuspiciousActivity}
+            onMobileStatusChange={setIsMobileConnected}
           />
         </div>
 
@@ -636,38 +831,48 @@ ChartJS.register(
             <CardHeader className="bg-slate-50/50 p-8 border-b border-slate-100">
               <div className="flex items-center justify-between mb-6">
                 <div className="px-4 py-1.5 rounded-full bg-slate-900 text-white text-[10px] font-bold uppercase tracking-widest">
-                  {questions.length > 0 && hasStarted ? `Question ${current + 1} of ${questions.length}` : "Awaiting Verification"}
+                  {questions.length > 0 && hasStarted
+                    ? `Question ${current + 1} of ${questions.length}`
+                    : "Awaiting Verification"}
                 </div>
                 <div className="flex gap-1">
-                  {(questions.length > 0 && hasStarted ? questions : [1,2,3,4,5]).map((_, i) => (
-                    <div key={i} className={`h-1 w-6 rounded-full transition-all duration-500 ${hasStarted && i <= current ? 'bg-blue-600' : 'bg-slate-200'}`}></div>
+                  {(questions.length > 0 && hasStarted
+                    ? questions
+                    : [1, 2, 3, 4, 5]
+                  ).map((_, i) => (
+                    <div
+                      key={i}
+                      className={`h-1 w-6 rounded-full transition-all duration-500 ${hasStarted && i <= current ? "bg-blue-600" : "bg-slate-200"}`}
+                    ></div>
                   ))}
                 </div>
               </div>
-              
+
               <h2 className="text-2xl font-bold text-slate-900 leading-tight">
-                {questions.length > 0 && hasStarted 
-                  ? (typeof questions[current] === 'object' ? questions[current].question : questions[current])
-                  : isAnalyzingFace 
-                    ? "Please look directly at the camera to begin your assessment." 
+                {questions.length > 0 && hasStarted
+                  ? typeof questions[current] === "object"
+                    ? questions[current].question
+                    : questions[current]
+                  : isAnalyzingFace
+                    ? "Please look directly at the camera to begin your assessment."
                     : "Initialize the interview to receive your first technical question."}
               </h2>
             </CardHeader>
-            
+
             <CardBody className="p-8">
               {questions.length > 0 && hasStarted ? (
                 <div className="space-y-6">
                   <div className="relative">
                     <textarea
-                      className={`w-full min-h-[200px] p-6 rounded-2xl bg-slate-50 ring-1 ring-slate-200 focus:ring-2 focus:ring-blue-600 outline-none transition-all text-lg font-medium text-slate-700 placeholder:text-slate-300 resize-none ${isRecording ? 'ring-blue-400 ring-2' : ''}`}
+                      className={`w-full min-h-[200px] p-6 rounded-2xl bg-slate-50 ring-1 ring-slate-200 focus:ring-2 focus:ring-blue-600 outline-none transition-all text-lg font-medium text-slate-700 placeholder:text-slate-300 resize-none ${isRecording ? "ring-blue-400 ring-2" : ""}`}
                       placeholder="Your answer will appear here via voice recognition, or you can type directly..."
                       value={answer}
                       onChange={(e) => setAnswer(e.target.value)}
                     />
                     <div className="absolute bottom-4 right-4 flex gap-2">
-                      <Button 
-                        onClick={startRecording} 
-                        className={`h-12 w-12 rounded-full flex items-center justify-center shadow-lg transition-all ${isRecording ? 'bg-red-500 shadow-red-500/40 animate-pulse' : 'bg-blue-600 shadow-blue-500/40 hover:scale-105 active:scale-95'}`}
+                      <Button
+                        onClick={startRecording}
+                        className={`h-12 w-12 rounded-full flex items-center justify-center shadow-lg transition-all ${isRecording ? "bg-red-500 shadow-red-500/40 animate-pulse" : "bg-blue-600 shadow-blue-500/40 hover:scale-105 active:scale-95"}`}
                       >
                         <MicIcon />
                       </Button>
@@ -676,15 +881,27 @@ ChartJS.register(
 
                   <div className="flex items-center justify-between pt-4">
                     <div className="flex items-center gap-2">
-                      {loading && <span className="text-sm font-bold text-blue-600 animate-pulse italic">AI Evaluating Response...</span>}
+                      {loading && (
+                        <span className="text-sm font-bold text-blue-600 animate-pulse italic">
+                          AI Evaluating Response...
+                        </span>
+                      )}
                       {score !== null && (
                         <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-50 border border-emerald-100">
-                          <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider">Evaluation Score:</span>
-                          <span className="text-lg font-bold text-emerald-900">{score}/10</span>
+                          <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider">
+                            Evaluation Score:
+                          </span>
+                          <span className="text-lg font-bold text-emerald-900">
+                            {score}/10
+                          </span>
                         </div>
                       )}
                     </div>
-                    <Button onClick={submitAnswer} disabled={!answer || loading} className="h-12 px-8 bg-slate-900 text-white font-bold rounded-2xl hover:bg-slate-800 transition-all flex items-center gap-2">
+                    <Button
+                      onClick={submitAnswer}
+                      disabled={!answer || loading}
+                      className="h-12 px-8 bg-slate-900 text-white font-bold rounded-2xl hover:bg-slate-800 transition-all flex items-center gap-2"
+                    >
                       Submit & Next
                       <ArrowRightIcon />
                     </Button>
@@ -696,19 +913,23 @@ ChartJS.register(
                     <SparklesIcon />
                   </div>
                   <h3 className="text-lg font-bold text-slate-900 mb-2">
-                    {!isAnalyzingFace && questions.length === 0 ? "Ready to showcase your skills?" : "Starting Interview..."}
+                    {!isAnalyzingFace && questions.length === 0
+                      ? "Ready to showcase your skills?"
+                      : "Starting Interview..."}
                   </h3>
                   <p className="text-sm text-slate-500 leading-relaxed max-w-xs mx-auto mb-6">
-                    {!isAnalyzingFace && questions.length === 0 
-                      ? "Click the button above to start your AI-led technical assessment. Make sure your camera and microphone are properly configured." 
+                    {!isAnalyzingFace && questions.length === 0
+                      ? "Interview starts only after desktop face and mobile camera are both ready. Then click Start Interview."
                       : "The AI is currently calibrating your camera and preparing your technical questions."}
                   </p>
-                  
+
                   {isAnalyzingFace && (
                     <div className="flex flex-col items-center gap-4">
                       <div className="w-12 h-12 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin"></div>
                       <span className="text-xs font-bold text-blue-600 uppercase tracking-widest animate-pulse">
-                        {isFaceDetected ? "Face Confirmed. Initializing..." : "Detecting Face..."}
+                        {isFaceDetected
+                          ? "Face Confirmed. Initializing..."
+                          : "Detecting Face..."}
                       </span>
                     </div>
                   )}
@@ -720,29 +941,41 @@ ChartJS.register(
           {/* Behavior Chart */}
           <Card className="border-none shadow-sm ring-1 ring-slate-200 rounded-3xl overflow-hidden">
             <CardHeader className="p-6 pb-0">
-              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest">Behavioral Analytics</h3>
+              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest">
+                Behavioral Analytics
+              </h3>
             </CardHeader>
             <CardBody className="p-6">
               <div className="h-[200px]">
                 <Bar
                   data={{
-                    labels: ['Joy', 'Neutral', 'Stress', 'Focus'],
-                    datasets: [{
-                      label: 'Emotion Probability',
-                      data: [
-                        emotion === 'happy' ? 0.9 : 0.1,
-                        emotion === 'neutral' ? 0.8 : 0.2,
-                        emotion === 'fearful' ? 0.7 : 0.1,
-                        integrity / 100
-                      ],
-                      backgroundColor: ['#10b981', '#64748b', '#f43f5e', '#3b82f6'],
-                      borderRadius: 12,
-                    }]
+                    labels: ["Joy", "Neutral", "Stress", "Focus"],
+                    datasets: [
+                      {
+                        label: "Emotion Probability",
+                        data: [
+                          emotion === "happy" ? 0.9 : 0.1,
+                          emotion === "neutral" ? 0.8 : 0.2,
+                          emotion === "fearful" ? 0.7 : 0.1,
+                          integrity / 100,
+                        ],
+                        backgroundColor: [
+                          "#10b981",
+                          "#64748b",
+                          "#f43f5e",
+                          "#3b82f6",
+                        ],
+                        borderRadius: 12,
+                      },
+                    ],
                   }}
                   options={{
                     maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
-                    scales: { y: { beginAtZero: true, max: 1, display: false }, x: { grid: { display: false } } }
+                    scales: {
+                      y: { beginAtZero: true, max: 1, display: false },
+                      x: { grid: { display: false } },
+                    },
                   }}
                 />
               </div>
@@ -759,32 +992,32 @@ export default Interview;
 
 const styles = {
   overlay: {
-    position: 'fixed',
+    position: "fixed",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.75)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
     zIndex: 9999,
   },
   popup: {
-    backgroundColor: 'white',
-    padding: '2rem',
-    borderRadius: '0.5rem',
-    textAlign: 'center',
-    maxWidth: '400px',
+    backgroundColor: "white",
+    padding: "2rem",
+    borderRadius: "0.5rem",
+    textAlign: "center",
+    maxWidth: "400px",
   },
   title: {
-    fontSize: '1.5rem',
-    fontWeight: 'bold',
-    color: '#dc2626',
-    marginBottom: '1rem',
+    fontSize: "1.5rem",
+    fontWeight: "bold",
+    color: "#dc2626",
+    marginBottom: "1rem",
   },
   message: {
-    fontSize: '1rem',
-    color: '#1f2937',
+    fontSize: "1rem",
+    color: "#1f2937",
   },
 };

@@ -1,10 +1,7 @@
-import pymongo
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional, List
-
-client = pymongo.MongoClient("mongodb://localhost:27017/")
-db = client["ai_interview_platform"]
+from database.mongo import _db as db
 
 class Interview(BaseModel):
     user_id: str

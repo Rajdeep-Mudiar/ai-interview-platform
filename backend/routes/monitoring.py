@@ -1,9 +1,12 @@
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 from datetime import datetime
+import os
+import socket
 import uuid
+from urllib.parse import urlparse, urlunparse
 from typing import Dict, List, Optional
-from bson import ObjectId
+from pymongo.errors import PyMongoError
 from pipeline_db import db, Session, ActivityLog
 
 router = APIRouter(prefix="/monitoring", tags=["monitoring"])
@@ -12,9 +15,41 @@ router = APIRouter(prefix="/monitoring", tags=["monitoring"])
 # session_id -> List of active WebSocket connections (usually just the desktop)
 active_connections: Dict[str, List[WebSocket]] = {}
 
+
+def raise_db_unavailable(exc: Exception) -> None:
+    raise HTTPException(status_code=503, detail=f"Monitoring database unavailable: {exc}")
+
+
+def get_local_ip_address() -> str:
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        sock.connect(("8.8.8.8", 80))
+        return sock.getsockname()[0]
+    except OSError:
+        return "127.0.0.1"
+    finally:
+        sock.close()
+
+
+def build_mobile_link(session_id: str) -> str:
+    base_url = os.getenv("MOBILE_MONITORING_BASE_URL", "").strip().rstrip("/")
+    if base_url:
+        try:
+            parsed = urlparse(base_url)
+            if parsed.hostname in {"localhost", "127.0.0.1"}:
+                ip_address = get_local_ip_address()
+                netloc = f"{ip_address}:{parsed.port}" if parsed.port else ip_address
+                parsed = parsed._replace(netloc=netloc)
+                base_url = urlunparse(parsed).rstrip("/")
+        except Exception:
+            pass
+        return f"{base_url}/mobile-monitoring/{session_id}"
+
+    ip_address = get_local_ip_address()
+    return f"http://{ip_address}:5173/mobile-monitoring/{session_id}"
+
 class SessionCreate(BaseModel):
     candidate_email: str
-    job_id: Optional[str] = None
     metadata: Optional[dict] = {}
 
 class AIEvent(BaseModel):
@@ -33,7 +68,6 @@ async def create_session(data: SessionCreate):
     session_id = str(uuid.uuid4())
     session = Session(
         session_id=session_id,
-        job_id=data.job_id,
         candidate_email=data.candidate_email,
         desktop_connected=True,
         mobile_connected=False,
@@ -41,11 +75,12 @@ async def create_session(data: SessionCreate):
         status="active",
         desktop_metadata=data.metadata
     )
-    db.sessions.insert_one(session.dict())
+    try:
+        db.sessions.insert_one(session.dict())
+    except PyMongoError as exc:
+        raise_db_unavailable(exc)
     
-    # Generate mobile link (in a real app, this would be a full URL)
-    # Use window.location.origin in frontend, but here we hardcode for demo
-    mobile_link = f"http://localhost:5173/mobile-monitoring/{session_id}"
+    mobile_link = build_mobile_link(session_id)
     
     return {
         "session_id": session_id,
@@ -54,17 +89,23 @@ async def create_session(data: SessionCreate):
 
 @router.post("/mobile/connect")
 async def mobile_connect(data: MobileConnect):
-    session = db.sessions.find_one({"session_id": data.session_id})
+    try:
+        session = db.sessions.find_one({"session_id": data.session_id})
+    except PyMongoError as exc:
+        raise_db_unavailable(exc)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
     
-    db.sessions.update_one(
-        {"session_id": data.session_id},
-        {"$set": {
-            "mobile_connected": True,
-            "mobile_metadata": data.metadata
-        }}
-    )
+    try:
+        db.sessions.update_one(
+            {"session_id": data.session_id},
+            {"$set": {
+                "mobile_connected": True,
+                "mobile_metadata": data.metadata
+            }}
+        )
+    except PyMongoError as exc:
+        raise_db_unavailable(exc)
     
     # Log the connection event
     log = ActivityLog(
@@ -75,7 +116,10 @@ async def mobile_connect(data: MobileConnect):
         timestamp=datetime.now(),
         metadata=data.metadata
     )
-    db.activity_logs.insert_one(log.dict())
+    try:
+        db.activity_logs.insert_one(log.dict())
+    except PyMongoError as exc:
+        raise_db_unavailable(exc)
     
     # Notify desktop via WebSocket
     if data.session_id in active_connections:
@@ -93,53 +137,41 @@ async def mobile_connect(data: MobileConnect):
     return {"status": "connected"}
 
 @router.get("/sessions/list")
-async def list_sessions(recruiter_id: Optional[str] = None):
-    query = {}
-    if recruiter_id:
-        # Find all jobs by this recruiter
-        jobs = list(db.jobs.find({"recruiter_id": recruiter_id}, {"_id": 1, "title": 1}))
-        job_map = {str(j["_id"]): j["title"] for j in jobs}
-        job_ids = list(job_map.keys())
-        query["job_id"] = {"$in": job_ids}
-        
-    sessions = list(db.sessions.find(query).sort("start_time", -1))
+async def list_sessions():
+    try:
+        sessions = list(db.sessions.find().sort("start_time", -1))
+    except PyMongoError as exc:
+        raise_db_unavailable(exc)
     for s in sessions:
         s["_id"] = str(s["_id"])
-        if recruiter_id:
-            s["job_title"] = job_map.get(s.get("job_id"), "Unknown Job")
-        else:
-            # If no recruiter_id provided (e.g. admin), fetch job titles as needed
-            job = db.jobs.find_one({"_id": ObjectId(s["job_id"])}, {"title": 1}) if s.get("job_id") else None
-            s["job_title"] = job["title"] if job else "Unknown Job"
     return sessions
 
 @router.get("/activity-logs")
-async def get_all_activity_logs(recruiter_id: Optional[str] = None, limit: int = 50):
-    query = {}
-    if recruiter_id:
-        # Find all jobs by this recruiter
-        jobs = list(db.jobs.find({"recruiter_id": recruiter_id}, {"_id": 1}))
-        job_ids = [str(j["_id"]) for j in jobs]
-        # Find sessions for these jobs
-        sessions = list(db.sessions.find({"job_id": {"$in": job_ids}}, {"session_id": 1}))
-        session_ids = [s["session_id"] for s in sessions]
-        query["session_id"] = {"$in": session_ids}
-        
-    logs = list(db.activity_logs.find(query).sort("timestamp", -1).limit(limit))
+async def get_all_activity_logs(limit: int = 50):
+    try:
+        logs = list(db.activity_logs.find().sort("timestamp", -1).limit(limit))
+    except PyMongoError as exc:
+        raise_db_unavailable(exc)
     for log in logs:
         log["_id"] = str(log["_id"])
     return logs
 
 @router.get("/sessions/{session_id}/logs")
 async def get_session_logs(session_id: str):
-    logs = list(db.activity_logs.find({"session_id": session_id}).sort("timestamp", -1))
+    try:
+        logs = list(db.activity_logs.find({"session_id": session_id}).sort("timestamp", -1))
+    except PyMongoError as exc:
+        raise_db_unavailable(exc)
     for log in logs:
         log["_id"] = str(log["_id"])
     return logs
 
 @router.get("/sessions/{session_id}")
 async def get_session(session_id: str):
-    session = db.sessions.find_one({"session_id": session_id})
+    try:
+        session = db.sessions.find_one({"session_id": session_id})
+    except PyMongoError as exc:
+        raise_db_unavailable(exc)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
     session["_id"] = str(session["_id"])
@@ -155,7 +187,10 @@ async def report_event(event: AIEvent):
         timestamp=datetime.now(),
         metadata=event.metadata
     )
-    db.activity_logs.insert_one(log.dict())
+    try:
+        db.activity_logs.insert_one(log.dict())
+    except PyMongoError as exc:
+        raise_db_unavailable(exc)
     
     # Update integrity score in session
     penalty = 0
@@ -166,10 +201,13 @@ async def report_event(event: AIEvent):
     elif event.event == "tab_switch": penalty = 10
     
     if penalty > 0:
-        db.sessions.update_one(
-            {"session_id": event.session_id},
-            {"$inc": {"integrity_score": -penalty}}
-        )
+        try:
+            db.sessions.update_one(
+                {"session_id": event.session_id},
+                {"$inc": {"integrity_score": -penalty}}
+            )
+        except PyMongoError as exc:
+            raise_db_unavailable(exc)
     
     # Push alert to desktop client via WebSocket
     if event.session_id in active_connections:
@@ -202,10 +240,14 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
     active_connections[session_id].append(websocket)
     
     # Update session status
-    db.sessions.update_one(
-        {"session_id": session_id},
-        {"$set": {"desktop_connected": True}}
-    )
+    try:
+        db.sessions.update_one(
+            {"session_id": session_id},
+            {"$set": {"desktop_connected": True}}
+        )
+    except PyMongoError:
+        await websocket.close(code=1011)
+        return
     
     try:
         while True:
@@ -219,7 +261,10 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
             del active_connections[session_id]
         
         # Optionally update session status
-        db.sessions.update_one(
-            {"session_id": session_id},
-            {"$set": {"desktop_connected": False}}
-        )
+        try:
+            db.sessions.update_one(
+                {"session_id": session_id},
+                {"$set": {"desktop_connected": False}}
+            )
+        except PyMongoError:
+            pass

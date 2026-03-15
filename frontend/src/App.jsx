@@ -26,6 +26,11 @@ function App() {
       <main className="min-h-[calc(100vh-4rem)]">
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/mobile-monitoring" element={<MobileMonitoring />} />
+          <Route
+            path="/mobile-monitoring/:sessionId"
+            element={<MobileMonitoring />}
+          />
           <Route
             path="/*"
             element={
@@ -92,7 +97,6 @@ function App() {
                   <Route path="/jobs" element={<Jobs />} />
                   <Route path="/report" element={<Report />} />
                   <Route path="/voice-interview" element={<VoiceInterview />} />
-                  <Route path="/mobile-monitoring/:sessionId" element={<MobileMonitoring />} />
                 </Routes>
               </ProtectedRoute>
             }
